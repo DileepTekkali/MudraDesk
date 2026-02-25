@@ -15,6 +15,18 @@ def get_current_user() -> dict | None:
         return None
     user_id = session['user_id']
 
+    # Handle Super Admin (sessions starting with 'superadmin_')
+    if isinstance(user_id, str) and user_id.startswith('superadmin_'):
+        return {
+            'id': user_id,
+            'email': os.environ.get('ADMIN_EMAIL', 'superadmin@internal'),
+            'owner_name': 'Super Admin',
+            'business_name': 'MudraDesk System',
+            'is_admin': True,
+            'is_approved': True,
+            'is_active': True
+        }
+
     # Use Supabase directly from supabase_client to avoid circular imports
     try:
         from supabase_client import get_user_by_id
