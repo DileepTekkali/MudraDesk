@@ -443,6 +443,20 @@ def login():
             flash('Email and password are required.', 'error')
             return render_template('login.html')
 
+        # 1. Check for "Super Admin" in Environment Variables
+        env_admin_email = os.environ.get('ADMIN_EMAIL')
+        env_admin_password = os.environ.get('ADMIN_PASSWORD')
+        
+        if env_admin_email and env_admin_password:
+            if email == env_admin_email.lower() and password == env_admin_password:
+                session.permanent = True
+                # Use a specific prefix for superadmin IDs
+                session['user_id'] = 'superadmin_' + secrets.token_hex(4)
+                session['is_admin'] = True
+                flash(f"Welcome back, Super Admin! 👋", 'success')
+                return redirect(url_for('index'))
+
+        # 2. Check Database (Supabase)
         user = _get_user_by_email_any(email)
 
         if not user or not check_password_hash(user['password_hash'], password):
