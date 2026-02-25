@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+
+{% block title %}Business Template - MudraDesk{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Business Template</h1>
+    <p class="page-subtitle">Configure your business details — saved securely in this browser</p>
+</div>
+
+<form class="template-form" id="templateForm" enctype="multipart/form-data">
+    <!-- Required Fields -->
+    <div class="form-section">
+        <h2 class="section-title">Required Information</h2>
+
+        <div class="form-group">
+            <label for="business_name" class="form-label">Business Name *</label>
+            <input type="text" id="business_name" name="business_name" class="form-input"
+                placeholder="Enter your business name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="business_address" class="form-label">Business Address *</label>
+            <textarea id="business_address" name="business_address" class="form-input form-textarea" required
+                placeholder="Enter complete business address"></textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="owner_name" class="form-label">Owner Name *</label>
+                <input type="text" id="owner_name" name="owner_name" class="form-input" value="" required
+                    placeholder="Owner's name">
+            </div>
+            <div class="form-group">
+                <label for="mobile" class="form-label">Mobile *</label>
+                <input type="tel" id="mobile" name="mobile" class="form-input" value="" required
+                    placeholder="Mobile number">
+            </div>
+        </div>
+    </div>
+
+    <!-- Optional Fields -->
+    <div class="form-section">
+        <h2 class="section-title">Optional Information</h2>
+
+        <div class="form-group">
+            <label for="gst_number" class="form-label">GST Number</label>
+            <input type="text" id="gst_number" name="gst_number" class="form-input" placeholder="e.g., 22AAAAA0000A1Z5">
+        </div>
+
+        <!-- Logo Upload -->
+        <div class="form-group">
+            <label for="logo" class="form-label">Business Logo (PNG/JPG)</label>
+            <div class="file-upload">
+                <input type="file" id="logo" name="logo" accept="image/png,image/jpeg" class="file-input">
+                <div class="file-upload-area" id="logoUploadArea">
+                    <img id="logoPreview" class="preview-image" style="display:none;" alt="Logo">
+                    <span class="file-name" id="logoFileName"></span>
+                    <button type="button" class="btn btn-secondary btn-sm file-remove" id="removeLogoBtn"
+                        style="display:none;">Remove</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signature Upload -->
+        <div class="form-group">
+            <label for="signature" class="form-label">Signature</label>
+            <div class="file-upload">
+                <input type="file" id="signature" name="signature" accept="image/png,image/jpeg" class="file-input">
+                <div class="file-upload-area" id="signatureUploadArea">
+                    <img id="signaturePreview" class="preview-image" style="display:none;" alt="Signature">
+                    <span class="file-name" id="signatureFileName"></span>
+                    <button type="button" class="btn btn-secondary btn-sm file-remove" id="removeSignatureBtn"
+                        style="display:none;">Remove</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stamp Section -->
+    <div class="form-section">
+        <h2 class="section-title">Business Stamp</h2>
+
+        <!-- Upload Stamp -->
+        <div class="stamp-upload-section" id="stampUploadSection">
+            <div class="form-group">
+                <label for="stamp_upload" class="form-label">Upload Stamp Image</label>
+                <div class="file-upload">
+                    <input type="file" id="stamp_upload" name="stamp_upload" accept="image/png,image/jpeg"
+                        class="file-input">
+                    <div class="file-upload-area" id="stampUploadArea">
+                        <img id="stampUploadPreview" class="preview-image" style="display:none;" alt="Stamp">
+                        <span class="file-name" id="stampFileName"></span>
+                        <button type="button" class="btn btn-secondary btn-sm file-remove" id="removeStampUploadBtn"
+                            style="display:none;">Remove</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auto Generate Toggle -->
+        <div class="toggle-group">
+            <label class="toggle-label">
+                <input type="checkbox" id="autoGenerateStamp" class="toggle-input">
+                <span class="toggle-slider"></span>
+                <span class="toggle-text">Auto-Generate Stamp</span>
+            </label>
+        </div>
+
+        <!-- Auto Generate Options -->
+        <div class="stamp-options" id="stampOptions" style="display:none;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="stamp_business_name" class="form-label">Name on Stamp *</label>
+                    <input type="text" id="stamp_business_name" name="stamp_business_name" class="form-input"
+                        placeholder="Business name for stamp">
+                </div>
+                <div class="form-group">
+                    <label for="stamp_place" class="form-label">Place *</label>
+                    <input type="text" id="stamp_place" name="stamp_place" class="form-input" placeholder="City/Town">
+                </div>
+            </div>
+
+            <div class="stamp-preview">
+                <label class="form-label">Circular Stamp Preview</label>
+                <div class="stamp-canvas-container">
+                    <canvas id="stampCanvas" width="180" height="180"></canvas>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm file-remove"
+                    id="removeStampGeneratedBtn">Remove</button>
+            </div>
+        </div>
+        <input type="hidden" name="stamp_data" id="stampData" value="">
+        <input type="hidden" name="stamp_type" value="circle">
+    </div>
+
+    <div id="saveStatus" style="display:none; padding:12px; border-radius:8px; margin-bottom:16px; font-weight:500;">
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-large btn-full">
+            💾 Save Template
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/stamp.js') }}"></script>
+<script>
+    // ── Load existing template from localStorage ─────────────
+    const existing = MudraStorage.loadTemplate() || {};
+    const fields = ['business_name', 'business_address', 'owner_name', 'mobile', 'gst_number',
+        'stamp_business_name', 'stamp_place'];
+    fields.forEach(f => {
+        const el = document.getElementById(f);
+        if (el && existing[f]) el.value = existing[f];
+    });
+
+    if (existing.stamp_data) {
+        document.getElementById('stampData').value = existing.stamp_data;
+        document.getElementById('autoGenerateStamp').checked = true;
+        document.getElementById('stampOptions').style.display = 'block';
+        document.getElementById('stampUploadSection').style.display = 'none';
+    }
+
+    // Restore image previews (server URLs stored in template)
+    function restorePreview(urlKey, previewId, fileNameId, removeBtnId) {
+        if (existing[urlKey]) {
+            const img = document.getElementById(previewId);
+            const nameEl = document.getElementById(fileNameId);
+            const removeBtn = document.getElementById(removeBtnId);
+            if (img) { img.src = existing[urlKey]; img.style.display = 'block'; }
+            if (nameEl) nameEl.textContent = 'Saved';
+            if (removeBtn) removeBtn.style.display = 'inline-flex';
+        }
+    }
+    restorePreview('logo_url', 'logoPreview', 'logoFileName', 'removeLogoBtn');
+    restorePreview('signature_url', 'signaturePreview', 'signatureFileName', 'removeSignatureBtn');
+    restorePreview('stamp_url', 'stampUploadPreview', 'stampFileName', 'removeStampUploadBtn');
+
+    // Stamp auto-generate toggle
+    document.getElementById('autoGenerateStamp').addEventListener('change', function () {
+        document.getElementById('stampOptions').style.display = this.checked ? 'block' : 'none';
+        document.getElementById('stampUploadSection').style.display = this.checked ? 'none' : 'block';
+        if (!this.checked) { document.getElementById('stampData').value = ''; }
+    });
+
+    // Remove buttons
+    function setupRemove(btnId, previewId, fileNameId, templateKey) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+            const filename = existing[templateKey === 'logo_url' ? 'logo_filename' :
+                templateKey === 'signature_url' ? 'signature_filename' : 'stamp_filename'];
+            if (filename) {
+                try {
+                    await fetch('/template/remove-asset', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename })
+                    });
+                } catch (e) { /* ignore */ }
+            }
+            const img = document.getElementById(previewId);
+            const nameEl = document.getElementById(fileNameId);
+            if (img) { img.src = ''; img.style.display = 'none'; }
+            if (nameEl) nameEl.textContent = '';
+            delete existing[templateKey];
+            btn.style.display = 'none';
+        });
+    }
+    setupRemove('removeLogoBtn', 'logoPreview', 'logoFileName', 'logo_url');
+    setupRemove('removeSignatureBtn', 'signaturePreview', 'signatureFileName', 'signature_url');
+    setupRemove('removeStampUploadBtn', 'stampUploadPreview', 'stampFileName', 'stamp_url');
+
+    // File input preview
+    function setupFilePreview(inputId, previewId, fileNameId, removeBtnId) {
+        document.getElementById(inputId).addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = document.getElementById(previewId);
+                const nameEl = document.getElementById(fileNameId);
+                const removeBtn = document.getElementById(removeBtnId);
+                if (img) { img.src = e.target.result; img.style.display = 'block'; }
+                if (nameEl) nameEl.textContent = file.name;
+                if (removeBtn) removeBtn.style.display = 'inline-flex';
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    setupFilePreview('logo', 'logoPreview', 'logoFileName', 'removeLogoBtn');
+    setupFilePreview('signature', 'signaturePreview', 'signatureFileName', 'removeSignatureBtn');
+    setupFilePreview('stamp_upload', 'stampUploadPreview', 'stampFileName', 'removeStampUploadBtn');
+
+    // ── Form Submit — Upload files, then save to localStorage ─
+    document.getElementById('templateForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const saveStatus = document.getElementById('saveStatus');
+        saveStatus.style.display = 'none';
+
+        const templateData = {
+            business_name: document.getElementById('business_name').value.trim(),
+            business_address: document.getElementById('business_address').value.trim(),
+            owner_name: document.getElementById('owner_name').value.trim(),
+            mobile: document.getElementById('mobile').value.trim(),
+            gst_number: document.getElementById('gst_number').value.trim(),
+            stamp_data: document.getElementById('stampData').value,
+            stamp_business_name: document.getElementById('stamp_business_name').value.trim(),
+            stamp_place: document.getElementById('stamp_place').value.trim(),
+            // keep existing URLs unless changed
+            logo_url: existing.logo_url || null,
+            logo_filename: existing.logo_filename || null,
+            signature_url: existing.signature_url || null,
+            signature_filename: existing.signature_filename || null,
+            stamp_url: existing.stamp_url || null,
+            stamp_filename: existing.stamp_filename || null,
+        };
+
+        // Upload files if selected
+        async function uploadAsset(inputId, assetType) {
+            const input = document.getElementById(inputId);
+            if (!input.files.length) return;
+            const fd = new FormData();
+            fd.append('file', input.files[0]);
+            fd.append('asset_type', assetType);
+            const res = await fetch('/template/upload-asset', { method: 'POST', body: fd });
+            if (res.ok) {
+                const data = await res.json();
+                return data;
+            }
+            return null;
+        }
+
+        try {
+            const logoRes = await uploadAsset('logo', 'logo');
+            if (logoRes) {
+                templateData.logo_url = logoRes.url;
+                templateData.logo_filename = logoRes.filename;
+            }
+            const sigRes = await uploadAsset('signature', 'signature');
+            if (sigRes) {
+                templateData.signature_url = sigRes.url;
+                templateData.signature_filename = sigRes.filename;
+            }
+            const stampRes = await uploadAsset('stamp_upload', 'stamp');
+            if (stampRes) {
+                templateData.stamp_url = stampRes.url;
+                templateData.stamp_filename = stampRes.filename;
+            }
+
+            MudraStorage.saveTemplate(templateData);
+
+            saveStatus.style.background = '#dcfce7';
+            saveStatus.style.color = '#16a34a';
+            saveStatus.style.border = '1px solid #16a34a';
+            saveStatus.textContent = '✅ Template saved successfully to this browser!';
+            saveStatus.style.display = 'block';
+
+            setTimeout(() => { window.location.href = '/'; }, 1500);
+        } catch (err) {
+            saveStatus.style.background = '#fee2e2';
+            saveStatus.style.color = '#dc2626';
+            saveStatus.style.border = '1px solid #dc2626';
+            saveStatus.textContent = '❌ Error saving template: ' + err.message;
+            saveStatus.style.display = 'block';
+        }
+    });
+
+    // Stamp generator
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof initStampGenerator === 'function') initStampGenerator();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if doc_type == 'quotation' %}Quotation History{% else %}Invoice History{% endif %} - MudraDesk{%
+endblock %}
+
+{% block content %}
+<style>
+    .history-controls {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+
+    .search-box {
+        flex: 1;
+        min-width: 280px;
+        position: relative;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 16px 12px 44px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 14px;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 18px;
+    }
+
+    .sort-dropdown {
+        padding: 12px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+        cursor: pointer;
+        min-width: 200px;
+    }
+
+    .history-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .history-card-wrapper {
+        position: relative;
+    }
+
+    .history-card {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.2s;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .history-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        border-color: var(--brand-primary);
+    }
+
+    .delete-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 14px;
+        opacity: 0;
+        transition: all 0.2s;
+        z-index: 10;
+    }
+
+    .history-card-wrapper:hover .delete-btn {
+        opacity: 1;
+    }
+
+    .delete-btn:hover {
+        background: #dc2626;
+        transform: scale(1.1);
+    }
+
+    .history-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .bill-number-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .bill-date {
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+
+    .customer-name {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .customer-contact {
+        color: var(--text-secondary);
+        font-size: 13px;
+        margin: 4px 0 0 0;
+    }
+
+    .history-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .total-amount {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--brand-primary);
+    }
+
+    .view-arrow {
+        font-size: 20px;
+        color: var(--brand-primary);
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+</style>
+
+<div class="page-header">
+    <h1 class="page-title">📚 {% if doc_type == 'quotation' %}Quotation History{% else %}Invoice History{% endif %}</h1>
+    <p class="page-subtitle">{% if doc_type == 'quotation' %}All your saved quotations{% else %}All your generated
+        invoices{% endif %} — stored in this browser</p>
+</div>
+
+<!-- Controls -->
+<div class="history-controls">
+    <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search by customer name or bill number…">
+    </div>
+    <select id="sortDropdown" class="sort-dropdown">
+        <option value="date-desc">📅 Newest First</option>
+        <option value="date-asc">📅 Oldest First</option>
+        <option value="amount-desc">💰 Highest Amount</option>
+        <option value="amount-asc">💰 Lowest Amount</option>
+        <option value="customer-asc">👤 Customer A–Z</option>
+        <option value="customer-desc">👤 Customer Z–A</option>
+    </select>
+</div>
+
+<div class="history-grid" id="historyList"></div>
+<div id="noResults" class="no-results" style="display:none;">
+    <div style="font-size:48px;margin-bottom:16px;">🔍</div>
+    <p>No records found matching your search.</p>
+</div>
+<div id="emptyState" style="display:none;" class="empty-state-container">
+    <div class="empty-state-icon">📋</div>
+    <h2 class="empty-state-title">No Records Yet</h2>
+    <p class="empty-state-text">Start creating {% if doc_type == 'quotation' %}quotations{% else %}invoices{% endif %}
+        to see them here.</p>
+    <a href="{{ url_for('create_quotation') if doc_type == 'quotation' else url_for('create_bill') }}"
+        class="btn btn-primary">
+        <span class="btn-icon">➕</span>
+        Create First {% if doc_type == 'quotation' %}Quotation{% else %}Invoice{% endif %}
+    </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const DOC_TYPE = "{{ doc_type }}";
+    const listEl = document.getElementById('historyList');
+    const noResults = document.getElementById('noResults');
+    const emptyState = document.getElementById('emptyState');
+    const searchInput = document.getElementById('searchInput');
+    const sortDropdown = document.getElementById('sortDropdown');
+
+    // Load from localStorage
+    let bills = DOC_TYPE === 'quotation'
+        ? MudraStorage.getQuotations()
+        : MudraStorage.getInvoices();
+
+    function formatAmount(n) {
+        return parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function renderBills(list) {
+        if (list.length === 0 && !searchInput.value) {
+            emptyState.style.display = 'block';
+            listEl.style.display = 'none';
+            return;
+        }
+        emptyState.style.display = 'none';
+        listEl.style.display = 'grid';
+
+        listEl.innerHTML = list.map(bill => `
+            <div class="history-card-wrapper"
+                 data-customer="${(bill.customer_name || '').toLowerCase()}"
+                 data-bill="${(bill.bill_number || '').toLowerCase()}"
+                 data-amount="${bill.total || 0}"
+                 data-date="${bill.created_at || ''}">
+                <div class="history-card" onclick="window.location='/bill/preview?bill_id=${bill.id}'">
+                    <div class="history-card-header">
+                        <span class="bill-number-badge">${bill.bill_number || '—'}</span>
+                        <span class="bill-date">${(bill.created_at || '').slice(0, 10)}</span>
+                    </div>
+                    <div class="history-card-body">
+                        <h3 class="customer-name">${bill.customer_name || '—'}</h3>
+                        ${bill.customer_mobile ? `<p class="customer-contact">📞 ${bill.customer_mobile}</p>` : ''}
+                    </div>
+                    <div class="history-card-footer">
+                        <span class="total-amount">₹${formatAmount(bill.total)}</span>
+                        <span class="view-arrow">→</span>
+                    </div>
+                </div>
+                <button class="delete-btn" onclick="deleteBill(event, '${bill.id}', '${bill.bill_number}')" title="Delete">🗑️</button>
+            </div>`).join('');
+    }
+
+    function getFilteredSorted() {
+        const query = (searchInput.value || '').toLowerCase();
+        let list = bills.filter(b =>
+            (b.customer_name || '').toLowerCase().includes(query) ||
+            (b.bill_number || '').toLowerCase().includes(query) ||
+            String(b.total || '').includes(query)
+        );
+        const sort = sortDropdown.value;
+        list.sort((a, b) => {
+            if (sort === 'date-desc') return new Date(b.created_at) - new Date(a.created_at);
+            if (sort === 'date-asc') return new Date(a.created_at) - new Date(b.created_at);
+            if (sort === 'amount-desc') return (b.total || 0) - (a.total || 0);
+            if (sort === 'amount-asc') return (a.total || 0) - (b.total || 0);
+            if (sort === 'customer-asc') return (a.customer_name || '').localeCompare(b.customer_name || '');
+            if (sort === 'customer-desc') return (b.customer_name || '').localeCompare(a.customer_name || '');
+            return 0;
+        });
+        return list;
+    }
+
+    function refresh() {
+        const list = getFilteredSorted();
+        if (list.length === 0 && searchInput.value) {
+            listEl.innerHTML = '';
+            noResults.style.display = 'block';
+            listEl.style.display = 'none';
+        } else {
+            noResults.style.display = 'none';
+            renderBills(list);
+        }
+    }
+
+    function deleteBill(event, billId, billNumber) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (confirm(`Delete ${billNumber}? This cannot be undone.`)) {
+            const storageType = DOC_TYPE === 'quotation' ? 'quotations' : 'invoices';
+            MudraStorage.deleteBill(storageType, billId);
+            bills = DOC_TYPE === 'quotation' ? MudraStorage.getQuotations() : MudraStorage.getInvoices();
+            refresh();
+        }
+    }
+
+    searchInput.addEventListener('input', refresh);
+    sortDropdown.addEventListener('change', refresh);
+
+    // Initial render
+    refresh();
+</script>
+{% endblock %}

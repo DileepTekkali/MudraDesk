@@ -1,0 +1,490 @@
+/**
+ * A4 Pagination and Print Styles for Invoice
+ * Ensures proper page breaks and signature/stamp placement
+ */
+
+/* A4 Page Dimensions */
+@media print {
+    @page {
+        size: A4;
+        margin: 0;
+        /* Remove browser headers/footers */
+    }
+
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Hide non-printable elements */
+    .sidebar,
+    .mobile-nav,
+    .export-actions,
+    .page-header,
+    .btn,
+    .pagination-warning {
+        display: none !important;
+    }
+
+    .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+
+    /* Remove wrapper styling */
+    .bill-preview-wrapper {
+        background: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Invoice page - full A4 with margins */
+    .bill-preview,
+    .invoice-page {
+        width: 794px !important;
+        height: 1153px !important;
+        padding: 60px 50px !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        background: white !important;
+        display: block !important;
+        border: none !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        overflow: hidden !important;
+    }
+
+    /* Remove break from last page */
+    .invoice-page:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+    }
+
+    .bill-header-section {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+
+    /* Page break controls */
+    .page-break-before {
+        page-break-before: always !important;
+        break-before: page !important;
+        padding-top: 10mm !important;
+        /* 10mm top margin for continuation pages */
+    }
+
+    .page-break-after {
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .page-break-inside-avoid {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Ensure signature section never breaks */
+    .signature-section {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-before: avoid !important;
+        break-before: avoid !important;
+    }
+
+    /* Keep totals and signature together */
+    /* Keep totals and signature together */
+    .totals-and-signature {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        margin-bottom: 0 !important;
+    }
+
+    .totals-section {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+        padding-bottom: 5px;  /* Reduced from 10px to 50% */
+    }
+
+    /* Invoice page container */
+    .invoice-page {
+        position: relative;
+        width: 794px;
+        height: 1153px;
+    }
+
+    /* Header section - 50mm */
+    .bill-header-section {
+        height: auto !important;
+        max-height: 50mm !important;
+        page-break-inside: avoid !important;
+        overflow: hidden !important;
+    }
+
+    /* Quotation Subject - clamp to ~3 lines in print */
+    .quotation-subject {
+        height: auto !important;
+        max-height: none !important;
+        page-break-inside: avoid !important;
+        overflow: visible !important;
+        margin-bottom: 12px !important;
+        padding: 8px 10px !important;
+    }
+
+    .quotation-subject-line {
+        margin: 0 !important;
+        line-height: 1.5 !important;
+        font-size: 13px !important;
+        display: flex !important;
+    }
+
+    .quotation-subject-text {
+        display: inline !important;
+        white-space: pre-line !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        max-height: calc(1.5em * 3) !important;
+        overflow: hidden !important;
+        flex: 1 !important;
+    }
+
+    .q-heading {
+        font-weight: 600 !important;
+        color: #1e3a8a !important;
+        flex-shrink: 0 !important;
+        margin-right: 6px !important;
+    }
+
+    /* Customer info - clamp address to ~4 lines in print */
+    .customer-section {
+        height: auto !important;
+        max-height: none !important;
+        page-break-inside: avoid !important;
+        overflow: visible !important;
+        margin-bottom: 15px !important;
+    }
+
+    .customer-label {
+        margin-bottom: 6px !important;
+    }
+
+    .customer-name {
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        margin-bottom: 6px !important;
+        margin-left: 0 !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+    }
+
+    .customer-mobile {
+        font-size: 12px !important;
+        color: #323C4A !important;
+        margin-bottom: 3px !important;
+        margin-left: 0 !important;
+    }
+
+    .customer-address {
+        font-size: 12px !important;
+        color: #323C4A !important;
+        max-width: 350px !important;
+        margin-left: 0 !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        white-space: normal !important;
+        line-height: 1.4 !important;
+        max-height: calc(1.4em * 4) !important;
+        overflow: hidden !important;
+    }
+
+    /* Items table - Remaining space (approx 160mm+) */
+    .items-section {
+        height: auto;
+        min-height: 100mm;
+        /* Ensure items take up available space */
+    }
+
+    /* Item name cell wrapping in print */
+    .item-name-cell {
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        white-space: normal !important;
+        max-width: 200px !important;
+    }
+
+    /* Quotation header compact in print */
+    .quotation-header {
+        margin-bottom: 12px !important;
+        padding-bottom: 12px !important;
+    }
+
+    .header-logo-box {
+        width: 70px !important;
+        height: 70px !important;
+    }
+
+    .header-business-name {
+        font-size: 20px !important;
+        margin-bottom: 5px !important;
+    }
+
+    .header-business-address {
+        font-size: 11px !important;
+        max-width: 280px !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+    }
+
+    .header-business-details {
+        font-size: 11px !important;
+        margin-top: 5px !important;
+    }
+
+    .header-doc-type {
+        font-size: 16px !important;
+    }
+
+    .doc-number {
+        font-size: 14px !important;
+        margin-top: 6px !important;
+    }
+
+    .doc-date {
+        font-size: 11px !important;
+    }
+
+    /* Quotation customer section compact */
+    .quotation-customer {
+        margin-bottom: 15px !important;
+    }
+
+    .quotation-customer .q-heading {
+        font-size: 11px !important;
+    }
+
+    .quotation-customer .customer-name {
+        font-size: 13px !important;
+    }
+
+    .quotation-customer .customer-mobile {
+        font-size: 10px !important;
+    }
+
+    .quotation-customer .customer-address {
+        font-size: 10px !important;
+        max-width: 300px !important;
+    }
+
+    /* Quotation table - smaller in print */
+    .doc-quotation table thead th {
+        font-size: 8.5px !important;
+        padding: 8px !important;
+    }
+
+    .doc-quotation table tbody td {
+        font-size: 9.35px !important;
+        padding: 8px !important;
+    }
+
+    /* Quotation totals - smaller in print */
+    .doc-quotation .totals-section > div > div {
+        font-size: 9.35px !important;
+        padding: 4px 0 !important;
+    }
+
+    .doc-quotation .totals-section > div > div:last-child {
+        font-size: 11.9px !important;
+        padding: 8px 0 !important;
+    }
+
+    /* Totals and signature compact for quotation */
+    .quotation-totals-sig {
+        margin-top: 10px !important;  /* Reduced from 20px to 50% */
+    }
+
+    .quotation-signature {
+        margin-top: 9px !important;  /* Reduced from 18px to 50% */
+    }
+
+    /* Prevent breaking totals/signature block */
+    .totals-and-signature {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    /* Avoid breaking table rows */
+    .items-table-row {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    /* Tax/Total - Ensure visibility */
+    /* Tax/Total - Ensure visibility */
+    .totals-section {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 25mm !important;
+        overflow: visible !important;
+    }
+
+    .totals-section div {
+        margin: 0 !important;
+        padding: 5px 0 !important;
+        font-size: 10.2pt !important;
+        line-height: 1.4 !important;
+    }
+
+    .totals-section div:last-child {
+        font-size: 15.3pt !important;
+        font-weight: bold !important;
+        border-top: 2pt solid #1e3a8a !important;
+        margin-top: 8px !important;
+        padding-top: 10px !important;
+        color: #1e3a8a !important;
+    }
+
+    /* Signature - Allow full height */
+    .signature-section {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        orphans: 2;
+        widows: 2;
+    }
+}
+
+/* Screen view - percentage-based layout */
+/* Screen view - discrete pages with fixed A4 dimensions */
+.invoice-page {
+    position: relative;
+    background: white;
+    /* Fixed A4 dimensions (794px × 1153px) */
+    width: 794px;
+    height: 1153px;
+    padding: 60px 50px; /* 15mm margins */
+    margin: 0 auto 30px auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Section height allocations */
+.bill-header-section {
+    margin-bottom: 20px;
+}
+
+.quotation-subject {
+    margin-bottom: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.quotation-subject-line {
+    margin: 0;
+    line-height: 1.6;
+    color: #334155;
+    display: flex;
+}
+
+.quotation-subject-text {
+    display: inline;
+    white-space: pre-line;
+    color: #1e293b;
+    flex: 1;
+}
+
+.q-heading {
+    font-weight: 600;
+    color: #475569;
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+.customer-section {
+    margin-bottom: 20px;
+}
+
+.items-section {
+    flex: 1;
+    margin-bottom: 20px;
+}
+
+.totals-section {
+    margin-bottom: 10px;  /* Reduced from 20px to 50% */
+}
+
+.signature-section {
+    margin-top: auto;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Ensure signature and totals stay together */
+.totals-and-signature {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Multi-page support */
+.invoice-continuation {
+    margin-top: 20px;
+}
+
+.continuation-header {
+    font-size: 12px;
+    color: #64748b;
+    text-align: right;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
+/* Items table pagination */
+.items-table-page {
+    page-break-inside: auto;
+}
+
+.items-table-row {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Prevent orphaned rows */
+tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Footer on last page only */
+.invoice-footer {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* ---------------- Watermark ---------------- */
+.doc-watermark {
+    position: absolute;
+    left: 50%;
+    /* Visually centered in the main content area (below header) */
+    top: 57%;
+    transform: translate(-50%, -50%);
+    width: 88%;
+    height: auto;
+    /* Preserve original logo colors (no filters). Use opacity only. */
+    opacity: 0.035;
+    z-index: 0;
+    pointer-events: none;
+}
+
+
+/* Ensure content stays above watermark */
+.invoice-content {
+    position: relative;
+    z-index: 1;
+}

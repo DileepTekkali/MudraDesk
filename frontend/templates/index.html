@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - MudraDesk{% endblock %}
+
+{% block content %}
+<style>
+    .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 32px;
+    }
+
+    .stat-card-widget {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card-widget:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+        border-color: var(--brand-primary);
+    }
+
+    .widget-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+    }
+
+    .icon-blue {
+        background: #e0f2fe;
+    }
+
+    .icon-green {
+        background: #dcfce7;
+    }
+
+    .icon-purple {
+        background: #f3e8ff;
+    }
+
+    .widget-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.2;
+    }
+
+    .widget-label {
+        color: var(--text-secondary);
+        font-size: 13px;
+        margin-top: 2px;
+    }
+
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-bottom: 40px;
+    }
+
+    .action-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 32px;
+        text-align: center;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 6px;
+        background: var(--brand-gradient);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-card:hover::before {
+        opacity: 1;
+    }
+
+    .action-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+        display: inline-block;
+        padding: 20px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+    }
+
+    .action-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 10px;
+    }
+
+    .action-desc {
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+        line-height: 1.6;
+        font-size: 14px;
+    }
+
+    .recent-section {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .bill-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border-color);
+        transition: background 0.2s;
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+        border-radius: 8px;
+    }
+
+    .bill-row:last-child {
+        border-bottom: none;
+    }
+
+    .bill-row:hover {
+        background: var(--bg-primary);
+    }
+
+    .bill-info-main {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .bill-avatar {
+        width: 38px;
+        height: 38px;
+        background: var(--brand-primary);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Welcome, {{ user.owner_name if user else 'User' }}! 👋</h1>
+        <p class="page-subtitle">Here's what's happening with your business today.</p>
+    </div>
+    <div style="text-align: right;">
+        <span style="font-size: 13px; color: var(--text-secondary);">Today is</span>
+        <div style="font-size: 17px; font-weight: 600; color: var(--text-primary);" id="todayDate"></div>
+    </div>
+</div>
+
+<!-- Quick Stats (from localStorage) -->
+<div class="dashboard-stats">
+    <div class="stat-card-widget">
+        <div class="widget-icon icon-blue">📄</div>
+        <div class="widget-content">
+            <div class="widget-value" id="statInvoices">—</div>
+            <div class="widget-label">Total Invoices</div>
+        </div>
+    </div>
+    <div class="stat-card-widget">
+        <div class="widget-icon icon-green">🧾</div>
+        <div class="widget-content">
+            <div class="widget-value" id="statQuotations">—</div>
+            <div class="widget-label">Total Quotations</div>
+        </div>
+    </div>
+    <div class="stat-card-widget">
+        <div class="widget-icon icon-purple">📋</div>
+        <div class="widget-content">
+            <div class="widget-value" id="statTemplate">—</div>
+            <div class="widget-label">Template</div>
+        </div>
+    </div>
+</div>
+
+<!-- Primary Actions -->
+<div class="action-grid">
+    <div class="action-card">
+        <div class="action-icon">➕</div>
+        <h3 class="action-title">Create Invoice</h3>
+        <p class="action-desc">Generate a professional invoice for your customers in seconds.</p>
+        <a href="{{ url_for('create_bill') }}" class="btn btn-primary btn-large btn-full" id="createInvoiceBtn">Start
+            Billing →</a>
+    </div>
+
+    <div class="action-card">
+        <div class="action-icon">🧾</div>
+        <h3 class="action-title">Create Quotation</h3>
+        <p class="action-desc">Create a quotation with a custom subject line.</p>
+        <a href="{{ url_for('create_quotation') }}" class="btn btn-primary btn-large btn-full"
+            id="createQuotationBtn">Create Quotation →</a>
+    </div>
+
+    <div class="action-card">
+        <div class="action-icon">📚</div>
+        <h3 class="action-title">Invoice History</h3>
+        <p class="action-desc">Access all your past invoices, search and manage records.</p>
+        <a href="{{ url_for('history') }}" class="btn btn-secondary btn-large btn-full">View Invoices</a>
+    </div>
+
+    <div class="action-card">
+        <div class="action-icon">📑</div>
+        <h3 class="action-title">Quotation History</h3>
+        <p class="action-desc">Access all your quotations separately from invoices.</p>
+        <a href="{{ url_for('quotation_history') }}" class="btn btn-secondary btn-large btn-full">View Quotations</a>
+    </div>
+
+    <div class="action-card">
+        <div class="action-icon">📋</div>
+        <h3 class="action-title">Manage Template</h3>
+        <p class="action-desc">Update your business details, logo, signature, and GST information.</p>
+        <a href="{{ url_for('template') }}" class="btn btn-outline btn-large btn-full">Edit Details</a>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="recent-section">
+    <div class="section-header">
+        <h2 style="font-size: 18px; font-weight: 700; margin: 0;">🕒 Recent Activity</h2>
+        <a href="{{ url_for('history') }}"
+            style="color: var(--brand-primary); text-decoration: none; font-weight: 500; font-size: 14px;">View All</a>
+    </div>
+    <div id="recentActivity">
+        <div style="text-align: center; padding: 30px; color: var(--text-secondary);">
+            <p>Loading recent activity…</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Date
+    document.getElementById('todayDate').textContent =
+        new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Load stats from localStorage
+    const invoices = MudraStorage.getInvoices();
+    const quotations = MudraStorage.getQuotations();
+    const template = MudraStorage.loadTemplate();
+
+    document.getElementById('statInvoices').textContent = invoices.length;
+    document.getElementById('statQuotations').textContent = quotations.length;
+    document.getElementById('statTemplate').textContent = template ? '✅ Set' : '⚠️ Not set';
+
+    // Warn if no template saved
+    const createInvoiceBtn = document.getElementById('createInvoiceBtn');
+    const createQuotationBtn = document.getElementById('createQuotationBtn');
+    if (!template) {
+        createInvoiceBtn.textContent = 'Setup Template First';
+        createInvoiceBtn.href = "{{ url_for('template') }}";
+        createQuotationBtn.textContent = 'Setup Template First';
+        createQuotationBtn.href = "{{ url_for('template') }}";
+    }
+
+    // Recent activity from localStorage
+    const recentDiv = document.getElementById('recentActivity');
+    const recentItems = [...invoices.slice(0, 3), ...quotations.slice(0, 2)]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5);
+
+    if (recentItems.length === 0) {
+        recentDiv.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-secondary);">
+            <p>No recent activity. Start creating invoices!</p></div>`;
+    } else {
+        recentDiv.innerHTML = recentItems.map(bill => `
+            <div class="bill-row" onclick="window.location='/bill/preview?bill_id=${bill.id}'">
+                <div class="bill-info-main">
+                    <div class="bill-avatar">${(bill.customer_name || '?')[0].toUpperCase()}</div>
+                    <div>
+                        <div style="font-weight:600;color:var(--text-primary);">${bill.customer_name || '—'}</div>
+                        <div style="font-size:12px;color:var(--text-secondary);">${bill.bill_number || ''}</div>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-weight:700;color:var(--brand-primary);">₹${(bill.total || 0).toFixed(2)}</div>
+                    <div style="font-size:12px;color:var(--text-muted);">${(bill.created_at || '').slice(0, 10)}</div>
+                </div>
+            </div>`).join('');
+    }
+</script>
+{% endblock %}

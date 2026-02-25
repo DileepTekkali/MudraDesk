@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if doc_type == 'quotation' %}Create Quotation{% else %}Create Invoice{% endif %} - MudraDesk{%
+endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{% if doc_type == 'quotation' %}Create Quotation{% else %}Create Invoice{% endif %}</h1>
+    <p class="page-subtitle" id="templateBusinessName">Loading template…</p>
+</div>
+
+<div id="noTemplateWarning"
+    style="display:none; background:#fef9c3; border:1px solid #ca8a04; border-radius:8px; padding:16px; margin-bottom:24px; color:#92400e;">
+    ⚠️ No template configured yet. <a href="/template" style="color:#92400e; font-weight:600;">Set up your template
+        first →</a>
+</div>
+
+<form class="bill-form" id="billForm">
+    <div class="form-section">
+        <h2 class="section-title">{% if doc_type == 'quotation' %}Quotation Details{% else %}Invoice Details{% endif %}
+        </h2>
+        <div class="form-group">
+            <label for="bill_date" class="form-label">Date</label>
+            <input type="date" id="bill_date" name="bill_date" class="form-input" required>
+        </div>
+    </div>
+
+    {% if doc_type == 'quotation' %}
+    <div class="form-section">
+        <h2 class="section-title">Subject</h2>
+        <div class="form-group">
+            <label for="subject" class="form-label">Quotation is for (1–3 lines) *</label>
+            <textarea id="subject" name="subject" class="form-input form-textarea" rows="3" maxlength="220" required
+                placeholder="e.g., Quotation for website redesign project"></textarea>
+            <p class="form-hint">Tip: keep it short. Max 3 lines.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Customer Details -->
+    <div class="form-section">
+        <h2 class="section-title">{% if doc_type == 'quotation' %}Quotation For{% else %}Bill To{% endif %}</h2>
+
+        <div class="form-group">
+            <label for="customer_name" class="form-label">Customer Name *</label>
+            <input type="text" id="customer_name" name="customer_name" class="form-input" required
+                placeholder="Enter customer name">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="customer_mobile" class="form-label">Mobile Number</label>
+                <input type="tel" id="customer_mobile" name="customer_mobile" class="form-input" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="customer_address" class="form-label">Address</label>
+                <input type="text" id="customer_address" name="customer_address" class="form-input"
+                    placeholder="Optional">
+            </div>
+        </div>
+    </div>
+
+    <!-- Items Section -->
+    <div class="form-section">
+        <h2 class="section-title">Items</h2>
+
+        <div class="items-table-header">
+            <div>Item Name</div>
+            <div style="text-align:right">Qty</div>
+            <div style="text-align:right">Rate</div>
+            <div style="text-align:right">Amount</div>
+            <div></div>
+        </div>
+
+        <div class="items-container" id="itemsContainer">
+            <div class="item-row" data-index="0">
+                <input type="text" name="item_name[]" class="form-input item-name" placeholder="Item name" required>
+                <input type="number" name="quantity[]" class="form-input item-qty" placeholder="0" min="0" step="0.01"
+                    value="1" required style="text-align:right">
+                <input type="number" name="rate[]" class="form-input item-rate" placeholder="0.00" min="0" step="0.01"
+                    required style="text-align:right">
+                <div class="item-amount">₹0.00</div>
+                <button type="button" class="btn-remove" onclick="removeItem(this)"
+                    style="visibility:hidden;">×</button>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-outline btn-full" onclick="addItem()" style="margin-top:10px;">
+            + Add Item
+        </button>
+    </div>
+
+    <!-- GST Section -->
+    <div class="form-section">
+        <div class="toggle-group">
+            <label class="toggle-label">
+                <input type="checkbox" id="gstEnabled" name="gst_enabled" class="toggle-input">
+                <span class="toggle-slider"></span>
+                <span>Enable GST</span>
+            </label>
+        </div>
+
+        <div class="gst-options" id="gstOptions" style="display:none; margin-top:15px;">
+            <div class="form-group">
+                <label for="gst_percentage" class="form-label">GST Percentage (%)</label>
+                <input type="number" id="gst_percentage" name="gst_percentage" class="form-input" placeholder="18"
+                    min="0" max="100" step="0.01" value="18">
+            </div>
+            <p class="form-hint" id="gstinHint"></p>
+        </div>
+    </div>
+
+    <!-- Totals Section -->
+    <div class="totals-section">
+        <div class="total-row">
+            <span>Subtotal</span>
+            <span id="subtotal">₹0.00</span>
+        </div>
+        <div class="total-row" id="gstRow" style="display:none;">
+            <span>GST (<span id="gstLabel">18</span>%)</span>
+            <span id="gstAmount">₹0.00</span>
+        </div>
+        <div class="total-row grand-total">
+            <span>Grand Total</span>
+            <span id="grandTotal">₹0.00</span>
+        </div>
+    </div>
+
+    <div class="form-actions" style="margin-top:32px;">
+        <button type="submit" class="btn btn-primary btn-large btn-full">
+            {% if doc_type == 'quotation' %}Generate Quotation{% else %}Generate Invoice{% endif %}
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const DOC_TYPE = "{{ doc_type }}";
+    let itemIndex = 1;
+
+    // ── Load template from localStorage ───────────────────────
+    const tpl = MudraStorage.loadTemplate();
+    if (!tpl) {
+        document.getElementById('noTemplateWarning').style.display = 'block';
+    } else {
+        document.getElementById('templateBusinessName').textContent = tpl.business_name || '';
+        if (tpl.gst_number) {
+            document.getElementById('gstinHint').textContent = 'GSTIN: ' + tpl.gst_number;
+        }
+    }
+
+    // Set today's date
+    document.getElementById('bill_date').value = new Date().toISOString().split('T')[0];
+
+    // ── Item management ────────────────────────────────────────
+    function addItem() {
+        const container = document.getElementById('itemsContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'item-row';
+        newRow.dataset.index = itemIndex;
+        newRow.innerHTML = `
+            <input type="text" name="item_name[]" class="form-input item-name" placeholder="Item name" required>
+            <input type="number" name="quantity[]" class="form-input item-qty" placeholder="0" min="0" step="0.01" value="1" required style="text-align:right">
+            <input type="number" name="rate[]" class="form-input item-rate" placeholder="0.00" min="0" step="0.01" required style="text-align:right">
+            <div class="item-amount">₹0.00</div>
+            <button type="button" class="btn-remove" onclick="removeItem(this)">×</button>
+        `;
+        container.appendChild(newRow);
+        itemIndex++;
+        newRow.querySelector('.item-name').focus();
+        updateRemoveButtons();
+        addRowEventListeners(newRow);
+    }
+
+    function removeItem(btn) {
+        btn.closest('.item-row').remove();
+        updateRemoveButtons();
+        calculateTotals();
+    }
+
+    function updateRemoveButtons() {
+        const rows = document.querySelectorAll('.item-row');
+        rows.forEach(row => {
+            const btn = row.querySelector('.btn-remove');
+            if (btn) btn.style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+        });
+    }
+
+    function formatIndianNumber(num) {
+        const n = Number(num);
+        if (Number.isNaN(n)) return '0.00';
+        return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    }
+
+    function addRowEventListeners(row) {
+        row.querySelector('.item-qty').addEventListener('input', () => calculateRowAmount(row));
+        row.querySelector('.item-rate').addEventListener('input', () => calculateRowAmount(row));
+    }
+
+    function calculateRowAmount(row) {
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+        const rate = parseFloat(row.querySelector('.item-rate').value) || 0;
+        row.querySelector('.item-amount').textContent = `₹${formatIndianNumber(qty * rate)}`;
+        calculateTotals();
+    }
+
+    function calculateTotals() {
+        let subtotal = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+            const rate = parseFloat(row.querySelector('.item-rate').value) || 0;
+            subtotal += qty * rate;
+        });
+        document.getElementById('subtotal').textContent = `₹${formatIndianNumber(subtotal)}`;
+
+        const gstEnabled = document.getElementById('gstEnabled').checked;
+        const gstPct = parseFloat(document.getElementById('gst_percentage').value) || 0;
+        let gstAmount = gstEnabled ? subtotal * gstPct / 100 : 0;
+        if (gstEnabled) {
+            document.getElementById('gstAmount').textContent = `₹${formatIndianNumber(gstAmount)}`;
+            document.getElementById('gstLabel').textContent = gstPct;
+        }
+        document.getElementById('grandTotal').textContent = `₹${formatIndianNumber(subtotal + gstAmount)}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        addRowEventListeners(document.querySelector('.item-row'));
+
+        // Draft persistence
+        const draftKey = DOC_TYPE === 'quotation' ? 'draft_quotation' : 'draft_invoice';
+        try {
+            const d = JSON.parse(localStorage.getItem(draftKey) || '{}');
+            ['customer_name', 'customer_mobile', 'customer_address'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !el.value && d[id]) el.value = d[id];
+            });
+            if (DOC_TYPE === 'quotation') {
+                const s = document.getElementById('subject');
+                if (s && !s.value && d.subject) s.value = d.subject;
+            }
+        } catch (e) { }
+
+        function saveDraft() {
+            try {
+                localStorage.setItem(draftKey, JSON.stringify({
+                    subject: (document.getElementById('subject') || {}).value || '',
+                    customer_name: document.getElementById('customer_name').value,
+                    customer_mobile: document.getElementById('customer_mobile').value,
+                    customer_address: document.getElementById('customer_address').value
+                }));
+            } catch (e) { }
+        }
+
+        ['customer_name', 'customer_mobile', 'customer_address'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', saveDraft);
+        });
+        const subj = document.getElementById('subject');
+        if (subj) subj.addEventListener('input', saveDraft);
+
+        document.getElementById('gstEnabled').addEventListener('change', function () {
+            document.getElementById('gstOptions').style.display = this.checked ? 'block' : 'none';
+            document.getElementById('gstRow').style.display = this.checked ? 'flex' : 'none';
+            calculateTotals();
+        });
+        document.getElementById('gst_percentage').addEventListener('input', calculateTotals);
+    });
+
+    // ── Form Submit — save bill to localStorage ───────────────
+    document.getElementById('billForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        if (!tpl) {
+            alert('Please set up your business template first.');
+            window.location.href = '/template';
+            return;
+        }
+
+        // Collect items
+        const items = [];
+        let subtotal = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const name = row.querySelector('.item-name').value.trim();
+            if (!name) return;
+            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+            const rate = parseFloat(row.querySelector('.item-rate').value) || 0;
+            const amount = qty * rate;
+            items.push({ name, quantity: qty, rate, amount });
+            subtotal += amount;
+        });
+
+        const gstEnabled = document.getElementById('gstEnabled').checked;
+        const gstPct = gstEnabled ? (parseFloat(document.getElementById('gst_percentage').value) || 0) : 0;
+        const gstAmount = gstEnabled ? subtotal * gstPct / 100 : 0;
+        const total = subtotal + gstAmount;
+
+        const bill = {
+            doc_type: DOC_TYPE,
+            customer_name: document.getElementById('customer_name').value.trim(),
+            customer_mobile: document.getElementById('customer_mobile').value.trim(),
+            customer_address: document.getElementById('customer_address').value.trim(),
+            bill_date: document.getElementById('bill_date').value,
+            subject: DOC_TYPE === 'quotation' ? (document.getElementById('subject').value.trim()) : null,
+            items,
+            subtotal,
+            gst_enabled: gstEnabled,
+            gst_percentage: gstPct,
+            gst_amount: gstAmount,
+            total,
+            // embed template snapshot for preview
+            template: tpl
+        };
+
+        const storageType = DOC_TYPE === 'quotation' ? 'quotations' : 'invoices';
+        const billId = MudraStorage.saveBill(storageType, bill);
+
+        // Clear draft
+        try { localStorage.removeItem(DOC_TYPE === 'quotation' ? 'draft_quotation' : 'draft_invoice'); } catch (e) { }
+
+        window.location.href = `/bill/preview?bill_id=${billId}`;
+    });
+</script>
+{% endblock %}

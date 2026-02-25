@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+
+{% block title %}Bill Preview - MudraDesk{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
+
+<div class="page-header">
+    <div class="page-header-row">
+        <div>
+            <h1 class="page-title" id="previewTitle">Preview</h1>
+            <p class="page-subtitle" id="previewSubtitle">Loading…</p>
+        </div>
+        <a href="#" id="newDocBtn" class="btn btn-outline">+ New</a>
+    </div>
+</div>
+
+<!-- Bill Preview Container -->
+<div class="bill-preview-wrapper" id="previewWrapper">
+    <div class="preview-scale-container" id="scaleContainer">
+        <div class="bill-preview invoice-page" id="billPreview">
+            <!-- Populated by JavaScript from localStorage -->
+            <div style="text-align:center; padding:60px; color:#64748b;">
+                <p>Loading bill data…</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Actions -->
+<div class="export-actions" style="display:flex; gap:16px; flex-wrap:wrap; margin-top:16px;">
+    <button class="btn btn-primary" onclick="downloadPDF()">Download PDF</button>
+    <button class="btn btn-secondary" onclick="downloadJPEG()">Download JPEG</button>
+    <button class="btn btn-secondary" onclick="shareBill()">Share</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pagination.js') }}"></script>
+<script src="{{ url_for('static', filename='js/export.js') }}"></script>
+<script>
+    // ── Extract bill_id from URL params ─────────────────────
+    const params = new URLSearchParams(window.location.search);
+    const billId = params.get('bill_id') || '';
+
+    // ── Load bill from localStorage ─────────────────────────
+    const bill = MudraStorage.getBillById(billId);
+    if (!bill) {
+        document.getElementById('previewTitle').textContent = 'Bill Not Found';
+        document.getElementById('previewSubtitle').textContent = 'This bill may have been cleared from your browser cache.';
+        document.getElementById('billPreview').innerHTML = `
+            <div style="text-align:center; padding:80px 40px; color:#64748b;">
+                <div style="font-size:48px; margin-bottom:16px;">🔍</div>
+                <h2 style="margin-bottom:8px; color:#1e293b;">Bill not found</h2>
+                <p>The bill data could not be found in this browser's storage.</p>
+                <a href="/history" class="btn btn-primary" style="margin-top:20px; display:inline-block;">Back to History</a>
+            </div>
+        `;
+    } else {
+        const tpl = bill.template || {};
+        const docType = bill.doc_type || 'invoice';
+        const docLabel = docType === 'quotation' ? 'QUOTATION' : 'INVOICE';
+        const isQuotation = docType === 'quotation';
+
+        // Update page header
+        document.getElementById('previewTitle').textContent = isQuotation ? 'Quotation Preview' : 'Invoice Preview';
+        document.getElementById('previewSubtitle').textContent = bill.bill_number || '';
+        document.getElementById('newDocBtn').textContent = isQuotation ? '+ New Quotation' : '+ New Invoice';
+        document.getElementById('newDocBtn').href = isQuotation ? '/quotation/create' : '/bill/create';
+        document.title = `${docLabel} #${bill.bill_number || ''} - MudraDesk`;
+
+        // Expose for export.js / pagination.js
+        window.billNumber = bill.bill_number || '';
+        window.docType = docType;
+        window.businessName = tpl.business_name || '';
+        window.billDate = bill.bill_date || new Date().toISOString().split('T')[0];
+        window.watermarkEnabled = 0; // watermark feature removed
+
+        // ── Format numbers Indian style ─────────────────────
+        function inr(n) {
+            return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(n) || 0);
+        }
+
+        // ── Build items table rows ──────────────────────────
+        const items = bill.items || [];
+        const itemRows = items.map((item, i) => `
+            <tr class="items-table-row" ${i < items.length - 1 ? 'style="border-bottom:1px solid #e2e8f0;"' : ''}>
+                <td style="padding:12px; color:#465161; font-size:13.6px;">${i + 1}</td>
+                <td class="item-name-cell" style="padding:12px; font-weight:500; font-size:13.6px;">${item.name}</td>
+                <td style="padding:12px; text-align:right; color:#323C4A; font-size:13.6px;">${Number.isInteger(item.quantity) ? item.quantity : parseFloat(item.quantity).toFixed(2)}</td>
+                <td style="padding:12px; text-align:right; color:#323C4A; font-size:13.6px;">₹${inr(item.rate)}</td>
+                <td style="padding:12px; text-align:right; font-weight:600; font-size:13.6px;">₹${inr(item.amount)}</td>
+            </tr>
+        `).join('');
+
+        // ── Logo image HTML ─────────────────────────────────
+        const logoHtml = tpl.logo_url
+            ? `<div class="header-logo-box"><img src="${tpl.logo_url}" alt="Logo" class="header-logo-img"></div>`
+            : '';
+
+        // ── Stamp + signature HTML ──────────────────────────
+        const stampHtml = (tpl.stamp_data || tpl.stamp_url)
+            ? `<img src="${tpl.stamp_data || tpl.stamp_url}" alt="Stamp"
+                style="max-height:70px; max-width:100%; position:absolute; z-index:1; opacity:0.9; transform:rotate(-5deg);">`
+            : '';
+        const sigHtml = tpl.signature_url
+            ? `<img src="${tpl.signature_url}" alt="Signature"
+                style="max-height:42px; max-width:115px; position:absolute; z-index:10;">`
+            : '';
+
+        // ── GST row in totals ────────────────────────────────
+        const gstRowHtml = bill.gst_enabled ? `
+            <div style="display:flex; justify-content:space-between; padding:8px 0; color:#323C4A; font-size:13.6px;">
+                <span>GST (${bill.gst_percentage}%)</span>
+                <span>₹${inr(bill.gst_amount)}</span>
+            </div>` : '';
+
+        // ── Quotation subject HTML ───────────────────────────
+        const subjectHtml = (isQuotation && bill.subject) ? `
+            <div class="quotation-subject">
+                <p class="quotation-subject-line" style="display:flex;">
+                    <strong class="q-heading" style="font-weight:bold; flex-shrink:0; margin-right:6px;">Subject:</strong>
+                    <span class="quotation-subject-text" style="flex:1;">${bill.subject}</span>
+                </p>
+            </div>` : '';
+
+        // ── GST in header ────────────────────────────────────
+        const gstinHtml = (tpl.gst_number && bill.gst_enabled)
+            ? `<p style="margin-top:4px;"><strong>GSTIN:</strong> ${tpl.gst_number}</p>` : '';
+
+        // ── Full invoice HTML ────────────────────────────────
+        document.getElementById('billPreview').className =
+            `bill-preview invoice-page ${isQuotation ? 'doc-quotation' : 'doc-invoice'}`;
+
+        document.getElementById('billPreview').innerHTML = `
+            <!-- Header -->
+            <div class="bill-header bill-header-section quotation-header">
+                ${logoHtml}
+                <div class="header-business-info">
+                    <h1 class="header-business-name">${tpl.business_name || ''}</h1>
+                    <p class="header-business-address">${tpl.business_address || ''}</p>
+                    <div class="header-business-details">
+                        <p><strong>Owner:</strong> <span class="owner-name">${tpl.owner_name || ''}</span></p>
+                        <p><strong>Mobile:</strong> ${tpl.mobile || ''}</p>
+                        ${gstinHtml}
+                    </div>
+                </div>
+                <div class="header-doc-info">
+                    <div class="header-doc-type">${docLabel}</div>
+                    <div class="header-doc-number">
+                        <p class="doc-number">#${bill.bill_number || ''}</p>
+                        <p class="doc-date">Date: ${bill.bill_date || ''}</p>
+                    </div>
+                </div>
+            </div>
+
+            ${subjectHtml}
+
+            <!-- Customer -->
+            <div class="customer-section ${isQuotation ? 'quotation-customer' : ''}">
+                <p class="customer-label" style="margin-bottom:8px;">
+                    <strong class="q-heading" style="font-weight:bold;">${isQuotation ? 'Quotation For:' : 'Bill To:'}</strong>
+                </p>
+                <h3 class="customer-name" style="font-size:16px; margin-left:0;">${bill.customer_name || '—'}</h3>
+                ${bill.customer_mobile ? `<p class="customer-mobile" style="font-size:13px; color:#323C4A; margin-left:0;">${bill.customer_mobile}</p>` : ''}
+                ${bill.customer_address ? `<p class="customer-address" style="font-size:13px; color:#323C4A; margin-left:0;">${bill.customer_address}</p>` : ''}
+            </div>
+
+            <!-- Items Table -->
+            <div class="items-section">
+                <table style="width:100%; border-collapse:collapse; margin-bottom:0px;">
+                    <thead style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                        <tr>
+                            <th style="text-align:left; padding:12px; color:#465161; font-size:12.75px; text-transform:uppercase;">#</th>
+                            <th style="text-align:left; padding:12px; color:#64748b; font-size:12.75px; text-transform:uppercase;">Item</th>
+                            <th style="text-align:right; padding:12px; color:#465161; font-size:12.75px; text-transform:uppercase;">Qty</th>
+                            <th style="text-align:right; padding:12px; color:#465161; font-size:12.75px; text-transform:uppercase;">Rate</th>
+                            <th style="text-align:right; padding:12px; color:#465161; font-size:12.75px; text-transform:uppercase;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>${itemRows}</tbody>
+                </table>
+            </div>
+
+            <div style="height:24px;"></div>
+
+            <!-- Totals + Signature -->
+            <div class="totals-and-signature ${isQuotation ? 'quotation-totals-sig' : ''}">
+                <div class="totals-section" style="display:flex; justify-content:flex-end; margin-bottom:25px;">
+                    <div style="min-width:250px;">
+                        <div style="display:flex; justify-content:space-between; padding:8px 0; color:#323C4A; font-size:13.6px;">
+                            <span>Subtotal</span>
+                            <span style="font-weight:600;">₹${inr(bill.subtotal)}</span>
+                        </div>
+                        ${gstRowHtml}
+                        <div style="display:flex; justify-content:space-between; padding:12px 0; border-top:2px solid #e2e8f0; margin-top:8px; font-size:15.3px; color:#1e3a8a; font-weight:700;">
+                            <span>Total</span>
+                            <span>₹${inr(bill.total)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="signature-section ${isQuotation ? 'quotation-signature' : ''}"
+                     style="margin-top:40px; display:flex; justify-content:flex-end;">
+                    <div style="width:180px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+                        <div style="position:relative; height:75px; width:100%; display:flex; align-items:center; justify-content:center; margin-bottom:6px;">
+                            ${stampHtml}
+                            ${sigHtml}
+                        </div>
+                        <div style="width:100%; height:1.5px; background-color:#475569; margin:0;"></div>
+                        <p style="font-size:10px; font-weight:600; color:#475569; text-transform:uppercase; margin:5px 0 0 0; line-height:1; letter-spacing:0.5px;">
+                            AUTHORIZED SIGNATURE
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:20px; text-align:center; color:#687281; font-size:12px;">
+                <p>Thank you for your business!</p>
+            </div>
+        `;
+    }
+
+    // ── Preview fit / scaling (same as original) ─────────────
+    (function () {
+        const PAGE_W = 794, PAGE_H = 1153;
+
+        function applyPreviewFit() {
+            const wrap = document.querySelector('.bill-preview-wrapper');
+            const sc = document.getElementById('scaleContainer');
+            const pages = [...document.querySelectorAll('.invoice-page')];
+            if (!wrap || !sc || pages.length === 0) return false;
+
+            const availableW = Math.max(wrap.clientWidth - 24, 100);
+            const scale = Math.min(availableW / PAGE_W, 1);
+
+            document.querySelectorAll('.page-shell').forEach(shell => {
+                const children = [...shell.children];
+                children.forEach(ch => shell.parentElement.insertBefore(ch, shell));
+                shell.remove();
+            });
+
+            sc.style.position = 'relative';
+            sc.style.width = '100%';
+            sc.style.display = 'flex';
+            sc.style.flexDirection = 'column';
+            sc.style.alignItems = 'center';
+            sc.style.gap = '16px';
+
+            pages.forEach(page => {
+                const shell = document.createElement('div');
+                shell.className = 'page-shell';
+                shell.style.width = (PAGE_W * scale) + 'px';
+                shell.style.height = (PAGE_H * scale) + 'px';
+                shell.style.margin = '0 auto 16px';
+                shell.style.overflow = 'hidden';
+                page.parentElement.insertBefore(shell, page);
+                shell.appendChild(page);
+                page.style.transformOrigin = 'top left';
+                page.style.transform = `scale(${scale})`;
+            });
+
+            wrap.style.overflowY = 'auto';
+            wrap.style.overflowX = 'hidden';
+            return true;
+        }
+
+        window.applyPreviewFit = applyPreviewFit;
+
+        function runWithRetries(maxRetries = 15, delay = 120) {
+            let tries = 0;
+            const tick = () => { tries++; if (!applyPreviewFit() && tries < maxRetries) setTimeout(tick, delay); };
+            tick();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => setTimeout(() => runWithRetries(20, 120), 120));
+        window.addEventListener('load', () => runWithRetries(20, 120));
+        window.addEventListener('resize', () => runWithRetries(10, 120));
+        window.addEventListener('orientationchange', () => setTimeout(() => runWithRetries(12, 120), 250));
+    })();
+</script>
+{% endblock %}
