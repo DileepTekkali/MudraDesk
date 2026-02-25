@@ -4,6 +4,13 @@ Only user profile data is stored in Supabase.
 Bills, invoices, quotations, and templates are stored in the browser's localStorage.
 """
 import os
+import sys
+
+# Add current directory to sys.path for robust imports on Vercel
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
 from supabase import create_client, Client
 
 _supabase_client: Client = None

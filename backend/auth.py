@@ -1,9 +1,12 @@
 import os
+import sys
 from functools import wraps
 from flask import session, redirect, url_for, flash
 
-
-
+# Add current directory to sys.path for robust imports on Vercel
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 
 def get_current_user() -> dict | None:
@@ -12,10 +15,10 @@ def get_current_user() -> dict | None:
         return None
     user_id = session['user_id']
 
-    # Use Supabase
+    # Use Supabase directly from supabase_client to avoid circular imports
     try:
-        from app import _supabase_enabled, _get_user_from_any_store
-        return _get_user_from_any_store(user_id)
+        from supabase_client import get_user_by_id
+        return get_user_by_id(user_id)
     except Exception:
         return None
 

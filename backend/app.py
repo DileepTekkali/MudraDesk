@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import json
 from datetime import datetime, timedelta
 from flask import (Flask, render_template, request, redirect, url_for,
@@ -19,16 +20,28 @@ try:
 except ImportError:
     pass
 
-template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'templates'))
-static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'static'))
+# Add current directory to sys.path for robust imports on Vercel
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
+template_dir = os.path.abspath(os.path.join(backend_dir, '..', 'frontend', 'templates'))
+static_dir = os.path.abspath(os.path.join(backend_dir, '..', 'frontend', 'static'))
+
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.secret_key = os.environ.get('SECRET_KEY', 'mudra-desk-secret-key-change-in-production')
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+
+# Use /tmp for uploads on Vercel (read-only filesystem fallback)
+if os.environ.get('VERCEL') == '1' or os.environ.get('FLASK_ENV') == 'production':
+    app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+else:
+    app.config['UPLOAD_FOLDER'] = os.path.join(backend_dir, 'uploads')
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 # Cookie-based permanent sessions — persist forever (~100 years)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
+app.config['SESSION_COOKIE_SECURE'] = (os.environ.get('FLASK_ENV') == 'production' or os.environ.get('VERCEL') == '1')
 SESSION_LIFETIME_DAYS = int(os.environ.get('SESSION_LIFETIME_DAYS', 36500))
 app.permanent_session_lifetime = timedelta(days=SESSION_LIFETIME_DAYS)
 
@@ -64,7 +77,10 @@ def inr_format(value):
 
 
 # Ensure upload directory exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+try:
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+except Exception:
+    pass
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
@@ -99,8 +115,9 @@ def validate_password_strength(password: str) -> list[str]:
 # ============================================
 
 # Import helpers
-from auth import login_required, admin_required, get_current_user
-from gst_verification import verify_gst
+# ============================================
+# Supabase Integration
+# ============================================
 
 # ============================================
 # Supabase Integration (optional — falls back
@@ -123,24 +140,20 @@ else:
     print("[MudraDesk] WARNING: No Supabase credentials found. User auth will not work.")
 
 
+# User fetching helpers are now just wrappers around supabase_client functions
 def _get_user_from_any_store(user_id: str) -> dict | None:
-    """Fetch user from Supabase."""
-    if _supabase_enabled:
-        try:
-            return get_user_by_id(user_id)
-        except Exception:
-            pass
-    return None
-
+    if not _supabase_enabled: return None
+    try: return get_user_by_id(user_id)
+    except Exception: return None
 
 def _get_user_by_email_any(email: str) -> dict | None:
-    """Fetch user by email from Supabase."""
-    if _supabase_enabled:
-        try:
-            return get_user_by_email(email)
-        except Exception:
-            pass
-    return None
+    if not _supabase_enabled: return None
+    try: return get_user_by_email(email)
+    except Exception: return None
+
+# Import auth and other modules AFTER supabase setup is initialized to prevent circular imports
+from auth import login_required, admin_required, get_current_user
+from gst_verification import verify_gst
 
 
 # ============================================
@@ -153,6 +166,16 @@ def index():
     user = get_current_user()
     # Bills/templates are in localStorage — just pass the user
     return render_template('index.html', user=user)
+
+
+@app.route('/health')
+def health_check():
+    """Simple health check route to verify the server is running."""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'supabase_configured': _supabase_enabled
+    })
 
 
 @app.route('/template', methods=['GET', 'POST'])

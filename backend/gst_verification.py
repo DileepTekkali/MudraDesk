@@ -1,10 +1,14 @@
-"""
-GST Verification Module
-Validates GST numbers and optionally verifies them via API
-"""
+import os
+import sys
 import re
 import requests
 from typing import Dict, Tuple
+
+# Add current directory to sys.path for robust imports on Vercel
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
 
 def validate_gst_format(gst_number: str) -> bool:
     """
