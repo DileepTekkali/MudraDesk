@@ -13,7 +13,8 @@ def get_current_user() -> dict | None:
     """Get the currently logged-in user from session."""
     if 'user_id' not in session:
         return None
-    user_id = session['user_id']
+    user_id = session.get('user_id')
+    print(f"[DEBUG] auth.get_current_user: user_id={user_id}")
 
     # Handle Super Admin (sessions starting with 'superadmin_')
     if isinstance(user_id, str) and user_id.startswith('superadmin_'):

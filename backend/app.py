@@ -170,11 +170,24 @@ def index():
 
 @app.route('/health')
 def health_check():
-    """Simple health check route to verify the server is running."""
+    """Detailed health check for Vercel debugging."""
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'supabase_configured': _supabase_enabled
+        'supabase_configured': _supabase_enabled,
+        'env': {
+            'vercel': os.environ.get('VERCEL') == '1',
+            'flask_env': os.environ.get('FLASK_ENV'),
+            'admin_email_set': bool(os.environ.get('ADMIN_EMAIL')),
+            'admin_password_set': bool(os.environ.get('ADMIN_PASSWORD')),
+            'secret_key_custom': os.environ.get('SECRET_KEY') is not None
+        },
+        'paths': {
+            'backend': os.path.dirname(os.path.abspath(__file__)),
+            'template': template_dir,
+            'static': static_dir,
+            'cwd': os.getcwd()
+        }
     })
 
 
@@ -448,13 +461,17 @@ def login():
         env_admin_password = os.environ.get('ADMIN_PASSWORD')
         
         if env_admin_email and env_admin_password:
-            if email == env_admin_email.lower() and password == env_admin_password:
+            if email == env_admin_email.strip().lower() and password == env_admin_password:
                 session.permanent = True
-                # Use a specific prefix for superadmin IDs
                 session['user_id'] = 'superadmin_' + secrets.token_hex(4)
                 session['is_admin'] = True
+                print(f"[DEBUG] Super Admin login success: {email}")
                 flash(f"Welcome back, Super Admin! 👋", 'success')
                 return redirect(url_for('index'))
+            else:
+                print(f"[DEBUG] Super Admin login mismatch for: {email}")
+        else:
+            print(f"[DEBUG] Super Admin env vars not fully set. Email: {bool(env_admin_email)}, Pwd: {bool(env_admin_password)}")
 
         # 2. Check Database (Supabase)
         user = _get_user_by_email_any(email)
