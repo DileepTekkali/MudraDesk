@@ -124,15 +124,17 @@
             </div>
 
             <div class="stamp-preview">
-                <label class="form-label">Circular Stamp Preview</label>
-                <div class="stamp-canvas-container">
-                    <canvas id="stampCanvas" width="180" height="180"></canvas>
+                <div class="form-group" style="text-align:center;">
+                    <label class="form-label">Stamp Preview</label>
+                    <div class="stamp-preview-wrapper">
+                        <canvas id="stampCanvas" width="1000" height="1000"></canvas>
+                    </div>
+                    <input type="hidden" id="stampData" name="stamp_data">
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm file-remove"
                     id="removeStampGeneratedBtn">Remove</button>
             </div>
         </div>
-        <input type="hidden" name="stamp_data" id="stampData" value="">
         <input type="hidden" name="stamp_type" value="circle">
     </div>
 
@@ -209,14 +211,33 @@
         btn.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            // Temporarily disable the file input so the picker cannot fire
-            // even if the event somehow propagates to it
-            const fileInput = document.getElementById(inputId);
-            if (fileInput) { fileInput.disabled = true; fileInput.value = ''; }
 
+            // 1. CLEAR UI INSTANTLY (Don't wait for backend)
+            const img = document.getElementById(previewId);
+            const nameEl = document.getElementById(fileNameId);
+            const hint = hintId ? document.getElementById(hintId) : null;
+
+            if (img) { img.src = ''; img.style.display = 'none'; }
+            if (nameEl) nameEl.textContent = '';
+            if (hint) hint.style.display = 'block';   // show "Tap to upload" again
+            btn.style.display = 'none';
+
+            // Temporarily disable & lock the file input during cleanup
+            const fileInput = document.getElementById(inputId);
+            if (fileInput) {
+                fileInput.value = '';
+                fileInput.disabled = true;
+                setFileInputActive(inputId, true); // but allow clicks on the area now
+            }
+
+            // 2. BACKEND REMOVAL (runs in background)
             const filenameKey = templateKey === 'logo_url' ? 'logo_filename' :
                 templateKey === 'signature_url' ? 'signature_filename' : 'stamp_filename';
             const filename = existing[filenameKey];
+
+            delete existing[templateKey];
+            delete existing[filenameKey];
+
             if (filename) {
                 try {
                     await fetch('/template/remove-asset', {
@@ -227,20 +248,8 @@
                 } catch (_) { /* ignore */ }
             }
 
-            // Clear UI
-            const img = document.getElementById(previewId);
-            const nameEl = document.getElementById(fileNameId);
-            const hint = hintId ? document.getElementById(hintId) : null;
-            if (img) { img.src = ''; img.style.display = 'none'; }
-            if (nameEl) nameEl.textContent = '';
-            if (hint) hint.style.display = 'block';   // show "Tap to upload" again
-            delete existing[templateKey];
-            delete existing[filenameKey];
-            btn.style.display = 'none';
-
-            // Re-enable & unlock file input so user can tap to upload again
+            // 3. FULLY RE-ENABLE
             if (fileInput) { fileInput.disabled = false; }
-            setFileInputActive(inputId, true);
         });
     }
     setupRemove('removeLogoBtn', 'logo', 'logoPreview', 'logoFileName', 'logo_url', 'logoHint');
