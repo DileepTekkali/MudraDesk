@@ -110,8 +110,7 @@ function initStampGenerator() {
     }
 
     /**
-     * Draw text along an arc. Character "heads" point OUTWARDS.
-     * This orientation is standard for seals.
+     * Draw text along an arc.
      *
      * @param {string}  text
      * @param {number}  cx, cy      – center
@@ -119,7 +118,7 @@ function initStampGenerator() {
      * @param {number}  midAngle    – midpoint angle of the text block (radians)
      * @param {string}  color
      * @param {number}  fontSize
-     * @param {boolean} isBottom    – if TRUE, text is on the bottom arc
+     * @param {boolean} isBottom    – if TRUE, use heads-in (readable) orientation
      */
     function drawArcText(text, cx, cy, r, midAngle, color, fontSize, isBottom) {
         ctx.save();
@@ -129,60 +128,55 @@ function initStampGenerator() {
         ctx.textBaseline = 'middle';
 
         const totalAngle = textArcAngle(text, fontSize, r);
-        let currentAngle;
-
-        if (!isBottom) {
-            // Top: iterate clockwise
-            currentAngle = midAngle - totalAngle / 2;
-        } else {
-            // Bottom: iterate counter-clockwise so characters read left-to-right (heads-out)
-            // To do this simply, we reverse the string and iterate clockwise from the left edge.
-            // Wait, simpler: if bottom, we want it flipped.
-            // Heads-out at the bottom means rotation is charAngle + PI/2 (same as top).
-            // But to read L->R at bottom while heads-out, we must go CCW or reverse string.
-            text = [...text].reverse().join('');
-            currentAngle = midAngle + totalAngle / 2;
-        }
+        // Start angle: subtract half of total angle to center it on midAngle
+        let currentAngle = midAngle - totalAngle / 2;
 
         for (const ch of text) {
             const cw = ctx.measureText(ch).width * 1.04;
             const halfAngle = cw / 2 / r;
-            // Center of THIS character
-            const charAngle = isBottom ? (currentAngle - halfAngle) : (currentAngle + halfAngle);
+            const charAngle = currentAngle + halfAngle;
 
             ctx.save();
             ctx.translate(
                 cx + Math.cos(charAngle) * r,
                 cy + Math.sin(charAngle) * r
             );
-            // Heads-out: rotate character by angle + 90 deg
-            ctx.rotate(charAngle + Math.PI / 2);
+
+            if (!isBottom) {
+                // Top: heads-out (rotate char by angle + 90 deg)
+                ctx.rotate(charAngle + Math.PI / 2);
+            } else {
+                // Bottom: heads-in (rotate char by angle - 90 deg) — readable L-to-R
+                ctx.rotate(charAngle - Math.PI / 2);
+            }
+
             ctx.fillText(ch, 0, 0);
             ctx.restore();
 
-            if (!isBottom) currentAngle += (cw / r);
-            else currentAngle -= (cw / r);
+            currentAngle += (cw / r);
         }
         ctx.restore();
     }
 
     // ─── Main stamp drawing ──────────────────────────────────────────────────
     function drawCircleStamp(ctx, centerX, centerY, name, place, color) {
-        const pad = 12;
+        // Multiplier based on current 1000px canvas vs original 180px design
+        const SCALE = canvas.width / 180;
+        const pad = 12 * SCALE;
         const maxR = Math.min(canvas.width, canvas.height) / 2 - pad;
-        const radius = Math.max(60, Math.min(84, maxR));
-        const innerRadius = Math.max(44, radius - 20);
+        const radius = Math.max(60 * SCALE, Math.min(84 * SCALE, maxR));
+        const innerRadius = Math.max(44 * SCALE, radius - 20 * SCALE);
         const textRadius = (radius + innerRadius) / 2;
 
         // Draw outer + inner circles
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 3.5 * SCALE;
         ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.stroke();
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 * SCALE;
         ctx.beginPath(); ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2); ctx.stroke();
 
         // ── Auto-size font ──
-        let fontSize = 14;
-        const minFontSize = 7;
+        let fontSize = 14 * SCALE;
+        const minFontSize = 7 * SCALE;
 
         function totalConsumed(fs) {
             return textArcAngle(name, fs, textRadius)
