@@ -110,68 +110,58 @@ function initStampGenerator() {
     }
 
     /**
-     * Draw text along a clockwise arc.
-     * `arcStart` = angle of the first character's LEFT edge.
-     * Characters are placed sequentially using their real measured widths.
+     * Draw text along an arc. Character "heads" point OUTWARDS.
+     * This orientation is standard for seals.
+     *
+     * @param {string}  text
+     * @param {number}  cx, cy      – center
+     * @param {number}  r           – radius
+     * @param {number}  midAngle    – midpoint angle of the text block (radians)
+     * @param {string}  color
+     * @param {number}  fontSize
+     * @param {boolean} isBottom    – if TRUE, text is on the bottom arc
      */
-    function drawArcText(text, cx, cy, r, arcStart, color, fontSize) {
+    function drawArcText(text, cx, cy, r, midAngle, color, fontSize, isBottom) {
         ctx.save();
         ctx.font = `bold ${fontSize}px Inter, sans-serif`;
         ctx.fillStyle = color;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        let angle = arcStart;
+        const totalAngle = textArcAngle(text, fontSize, r);
+        let currentAngle;
+
+        if (!isBottom) {
+            // Top: iterate clockwise
+            currentAngle = midAngle - totalAngle / 2;
+        } else {
+            // Bottom: iterate counter-clockwise so characters read left-to-right (heads-out)
+            // To do this simply, we reverse the string and iterate clockwise from the left edge.
+            // Wait, simpler: if bottom, we want it flipped.
+            // Heads-out at the bottom means rotation is charAngle + PI/2 (same as top).
+            // But to read L->R at bottom while heads-out, we must go CCW or reverse string.
+            text = [...text].reverse().join('');
+            currentAngle = midAngle + totalAngle / 2;
+        }
+
         for (const ch of text) {
             const cw = ctx.measureText(ch).width * 1.04;
             const halfAngle = cw / 2 / r;
-            const charAngle = angle + halfAngle;
+            // Center of THIS character
+            const charAngle = isBottom ? (currentAngle - halfAngle) : (currentAngle + halfAngle);
 
             ctx.save();
             ctx.translate(
                 cx + Math.cos(charAngle) * r,
                 cy + Math.sin(charAngle) * r
             );
+            // Heads-out: rotate character by angle + 90 deg
             ctx.rotate(charAngle + Math.PI / 2);
             ctx.fillText(ch, 0, 0);
             ctx.restore();
 
-            angle += cw / r;
-        }
-        ctx.restore();
-    }
-
-    /**
-     * Draw text along a counter-clockwise arc (used for bottom arc so the
-     * reading direction stays left-to-right).
-     * `arcStart` = angle of the first character's RIGHT edge (rightmost char first).
-     * The string is reversed before iteration, so visual order is correct.
-     */
-    function drawArcTextReversed(text, cx, cy, r, arcStart, color, fontSize) {
-        ctx.save();
-        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
-        ctx.fillStyle = color;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Reverse so we place characters from right → left while reading left → right
-        const reversed = [...text].reverse().join('');
-        let angle = arcStart;
-        for (const ch of reversed) {
-            const cw = ctx.measureText(ch).width * 1.04;
-            const halfAngle = cw / 2 / r;
-            const charAngle = angle - halfAngle;   // counter-clockwise
-
-            ctx.save();
-            ctx.translate(
-                cx + Math.cos(charAngle) * r,
-                cy + Math.sin(charAngle) * r
-            );
-            ctx.rotate(charAngle - Math.PI / 2);
-            ctx.fillText(ch, 0, 0);
-            ctx.restore();
-
-            angle -= cw / r;
+            if (!isBottom) currentAngle += (cw / r);
+            else currentAngle -= (cw / r);
         }
         ctx.restore();
     }
@@ -190,7 +180,7 @@ function initStampGenerator() {
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2); ctx.stroke();
 
-        // ── Auto-size font so all content fits within 92 % of the circle ──
+        // ── Auto-size font ──
         let fontSize = 14;
         const minFontSize = 7;
 
@@ -204,50 +194,37 @@ function initStampGenerator() {
             fontSize -= 0.5;
         }
 
-        // ── Compute exact positions ────────────────────────────────────────
         const topAngle = textArcAngle(name, fontSize, textRadius);
         const botAngle = place ? textArcAngle(place, fontSize, textRadius) : 0;
         const sa = starArcAngle(fontSize, textRadius);
+        const gapEach = Math.max(0, (Math.PI * 2 - topAngle - botAngle - sa * 2) / 2);
 
-        // Remaining arc is divided equally into the two gap regions
-        const freeArc = Math.max(0, Math.PI * 2 - topAngle - botAngle - sa * 2);
-        const gapEach = freeArc / 2;
-
-        // North pole = −π/2.  Top text is centred there.
-        const topStart = -Math.PI / 2 - topAngle / 2;
-        const topEnd = topStart + topAngle;
-
-        // Right gap → right star centre
-        const rightStarCenter = topEnd + gapEach / 2 + sa / 2;
-
-        // Bottom text is centred on the south pole (π/2).
-        // For the reversed-draw function we need the rightmost edge.
-        const botRightEdge = Math.PI / 2 + botAngle / 2;
-        const botLeftEdge = botRightEdge - botAngle;
-
-        // Left gap → left star centre
-        const leftStarCenter = botRightEdge + gapEach / 2 + sa / 2;
+        // North pole = -PI/2, South pole = PI/2
+        const midTop = -Math.PI / 2;
+        const midBot = Math.PI / 2;
 
         // ── Draw text ──────────────────────────────────────────────────────
-        drawArcText(name, centerX, centerY, textRadius, topStart, color, fontSize);
+        // Top text: heads out
+        drawArcText(name, centerX, centerY, textRadius, midTop, color, fontSize, false);
 
+        // Bottom text: heads out (flipped so it reads L->R)
         if (place) {
-            drawArcTextReversed(place, centerX, centerY, textRadius, botRightEdge, color, fontSize);
+            drawArcText(place, centerX, centerY, textRadius, midBot, color, fontSize, true);
         }
 
         // ── Draw stars ─────────────────────────────────────────────────────
+        const leftStarPos = midBot + botAngle / 2 + gapEach / 2 + sa / 2;
+        const rightStarPos = midTop + topAngle / 2 + gapEach / 2 + sa / 2;
+
         ctx.save();
         ctx.font = `bold ${fontSize}px Inter, sans-serif`;
         ctx.fillStyle = color;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        for (const starAngle of [rightStarCenter, leftStarCenter]) {
+        for (const starAngle of [leftStarPos, rightStarPos]) {
             ctx.save();
-            ctx.translate(
-                centerX + Math.cos(starAngle) * textRadius,
-                centerY + Math.sin(starAngle) * textRadius
-            );
+            ctx.translate(centerX + Math.cos(starAngle) * textRadius, centerY + Math.sin(starAngle) * textRadius);
             ctx.rotate(starAngle + Math.PI / 2);
             ctx.fillText('★', 0, 0);
             ctx.restore();

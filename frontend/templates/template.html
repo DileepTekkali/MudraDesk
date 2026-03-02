@@ -55,7 +55,7 @@
                 <input type="file" id="logo" name="logo" accept="image/png" class="file-input">
                 <div class="file-upload-area" id="logoUploadArea">
                     <img id="logoPreview" class="preview-image" style="display:none;" alt="Logo">
-                    <p class="upload-hint" id="logoHint">📷 Tap to upload logo</p>
+                    <p class="upload-hint" id="logoHint">📤 Tap to upload logo</p>
                     <span class="file-name" id="logoFileName"></span>
                     <button type="button" class="btn btn-secondary btn-sm file-remove" id="removeLogoBtn"
                         style="display:none;">Remove</button>
@@ -70,7 +70,7 @@
                 <input type="file" id="signature" name="signature" accept="image/png" class="file-input">
                 <div class="file-upload-area" id="signatureUploadArea">
                     <img id="signaturePreview" class="preview-image" style="display:none;" alt="Signature">
-                    <p class="upload-hint" id="signatureHint">✍️ Tap to upload signature</p>
+                    <p class="upload-hint" id="signatureHint">🖊️ Tap to upload signature</p>
                     <span class="file-name" id="signatureFileName"></span>
                     <button type="button" class="btn btn-secondary btn-sm file-remove" id="removeSignatureBtn"
                         style="display:none;">Remove</button>
@@ -91,7 +91,7 @@
                     <input type="file" id="stamp_upload" name="stamp_upload" accept="image/png" class="file-input">
                     <div class="file-upload-area" id="stampUploadArea">
                         <img id="stampUploadPreview" class="preview-image" style="display:none;" alt="Stamp">
-                        <p class="upload-hint" id="stampHint">🖼️ Tap to upload stamp</p>
+                        <p class="upload-hint" id="stampHint">📜 Tap to upload stamp</p>
                         <span class="file-name" id="stampFileName"></span>
                         <button type="button" class="btn btn-secondary btn-sm file-remove" id="removeStampUploadBtn"
                             style="display:none;">Remove</button>
@@ -233,7 +233,7 @@
             const hint = hintId ? document.getElementById(hintId) : null;
             if (img) { img.src = ''; img.style.display = 'none'; }
             if (nameEl) nameEl.textContent = '';
-            if (hint) hint.style.display = '';   // show "Tap to upload" again
+            if (hint) hint.style.display = 'block';   // show "Tap to upload" again
             delete existing[templateKey];
             delete existing[filenameKey];
             btn.style.display = 'none';
