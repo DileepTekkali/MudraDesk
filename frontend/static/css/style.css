@@ -449,6 +449,22 @@ a {
     background: var(--brand-light);
 }
 
+/* Stamp Preview scaling for 4K internal resolution */
+.stamp-preview-wrapper {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#stampCanvas {
+    width: 180px !important;
+    height: 180px !important;
+    display: block;
+}
+
 /* Toggles and Radio */
 .toggle-label {
     display: flex;

@@ -8,31 +8,31 @@ async function downloadPDF() {
     // Check if pages already exist (from preview pagination)
     let pages = document.querySelectorAll('.invoice-page');
     let restoreDOM = null;
-    
+
     if (pages.length === 0) {
         // No paginated pages - check for original single page
         const billPreview = document.getElementById('billPreview');
-        
+
         if (billPreview) {
             // Single-page exists - paginate temporarily
             console.log('Paginating invoice for PDF export...');
             restoreDOM = InvoicePaginator.paginateForExport();
-            
+
             if (!restoreDOM) {
                 showToast('Failed to prepare invoice for export', 'error');
                 return;
             }
-            
+
             // Small delay for DOM to settle
             await new Promise(resolve => setTimeout(resolve, 100));
-            
+
             // Get pages after pagination
             pages = document.querySelectorAll('.invoice-page');
         }
     } else {
         console.log('Using existing paginated pages for PDF export');
     }
-    
+
     if (pages.length === 0) {
         showToast('No pages found to export', 'error');
         if (restoreDOM) restoreDOM();
@@ -69,7 +69,7 @@ async function downloadPDF() {
 
         // Ensure custom fonts are loaded
         if (document.fonts && document.fonts.ready) {
-            try { await document.fonts.ready; } catch (_) {}
+            try { await document.fonts.ready; } catch (_) { }
         }
 
         const pdf = new jsPDF({
@@ -86,7 +86,7 @@ async function downloadPDF() {
 
             // Capture at full resolution
             const canvas = await html2canvas(page, {
-                scale: 2.5,
+                scale: 5.0,
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#ffffff',
@@ -97,11 +97,11 @@ async function downloadPDF() {
             const imgWidth = pdfWidth;
             const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-            pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgWidth, imgHeight);
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, imgWidth, imgHeight);
         }
 
         // Restore page-shell wrappers
-        shellWrappers.forEach(({shell, parent, nextSibling, transform}, index) => {
+        shellWrappers.forEach(({ shell, parent, nextSibling, transform }, index) => {
             const page = pages[index];
             if (nextSibling) {
                 parent.insertBefore(shell, nextSibling);
@@ -111,7 +111,7 @@ async function downloadPDF() {
             shell.appendChild(page);
             page.style.transform = transform;
         });
-        
+
         // Restore original DOM if we paginated temporarily
         if (restoreDOM) {
             restoreDOM();
@@ -127,7 +127,7 @@ async function downloadPDF() {
     } catch (error) {
         console.error('PDF generation error:', error);
         showToast('Failed to generate PDF', 'error');
-        
+
         if (restoreDOM) {
             restoreDOM();
         }
@@ -139,19 +139,19 @@ async function downloadJPEG() {
     // Check if pages already exist (from preview pagination)
     let pages = document.querySelectorAll('.invoice-page');
     let restoreDOM = null;
-    
+
     if (pages.length === 0) {
         const billPreview = document.getElementById('billPreview');
-        
+
         if (billPreview) {
             console.log('Paginating invoice for JPEG export...');
             restoreDOM = InvoicePaginator.paginateForExport();
-            
+
             if (!restoreDOM) {
                 showToast('Failed to prepare invoice for export', 'error');
                 return;
             }
-            
+
             await new Promise(resolve => setTimeout(resolve, 100));
             pages = document.querySelectorAll('.invoice-page');
         }
@@ -221,12 +221,12 @@ async function downloadJPEG() {
                         URL.revokeObjectURL(link.href);
                         resolve();
                     }, 100);
-                }, 'image/jpeg', 0.90);
+                }, 'image/jpeg', 0.98);
             });
         }
 
         // Restore page-shell wrappers
-        shellWrappers.forEach(({shell, parent, nextSibling, transform}, index) => {
+        shellWrappers.forEach(({ shell, parent, nextSibling, transform }, index) => {
             const page = pages[index];
             if (nextSibling) {
                 parent.insertBefore(shell, nextSibling);
@@ -236,7 +236,7 @@ async function downloadJPEG() {
             shell.appendChild(page);
             page.style.transform = transform;
         });
-        
+
         if (restoreDOM) {
             restoreDOM();
         }
@@ -245,7 +245,7 @@ async function downloadJPEG() {
     } catch (error) {
         console.error('JPEG generation error:', error);
         showToast('Failed to generate image', 'error');
-        
+
         if (restoreDOM) {
             restoreDOM();
         }
@@ -256,7 +256,7 @@ async function downloadJPEG() {
 // मोबाइल में share बटन दबाते ही सीधे apps (WhatsApp/Gmail/Drive etc.) की share-sheet open होगी.
 async function shareBill() {
     const { jsPDF } = window.jspdf || {};
-    
+
     if (!jsPDF) {
         showToast('PDF library not loaded. Please refresh and try again.', 'error');
         return;
@@ -265,17 +265,17 @@ async function shareBill() {
     // Check if we need to paginate first
     let restoreDOM = null;
     const billPreview = document.getElementById('billPreview');
-    
+
     if (billPreview) {
         // Original single-page DOM exists - paginate temporarily
         console.log('Paginating invoice for sharing...');
         restoreDOM = InvoicePaginator.paginateForExport();
-        
+
         if (!restoreDOM) {
             showToast('Failed to prepare invoice for sharing', 'error');
             return;
         }
-        
+
         // Small delay for DOM to settle
         await new Promise(resolve => setTimeout(resolve, 100));
     }
@@ -296,7 +296,7 @@ async function shareBill() {
         const scaleContainer = document.getElementById('scaleContainer');
         const originalTransform = scaleContainer ? scaleContainer.style.transform : '';
         const originalPosition = scaleContainer ? scaleContainer.style.position : '';
-        
+
         if (scaleContainer) {
             scaleContainer.style.transform = 'none';
             scaleContainer.style.position = 'static';
@@ -304,7 +304,7 @@ async function shareBill() {
 
         // Ensure fonts are loaded so all text is included in the captured PDF
         if (document.fonts && document.fonts.ready) {
-            try { await document.fonts.ready; } catch (_) {}
+            try { await document.fonts.ready; } catch (_) { }
         }
 
         // Build PDF in-memory
@@ -333,7 +333,7 @@ async function shareBill() {
             scaleContainer.style.transform = originalTransform;
             scaleContainer.style.position = originalPosition;
         }
-        
+
         // Restore original DOM if we paginated
         if (restoreDOM) {
             restoreDOM();
@@ -368,7 +368,7 @@ async function shareBill() {
             console.log('Share link upload failed, will continue without link:', e);
         }
 
-        
+
         // If we have a share URL, try native share sheet with URL (shows installed apps on many devices/desktops)
         if (shareUrl && navigator.share) {
             try {
@@ -380,18 +380,18 @@ async function shareBill() {
                 console.log('URL share failed, falling back to modal:', e);
             }
         }
-showToast('Opening share options...', 'info');
+        showToast('Opening share options...', 'info');
         openShareFallbackPanel({ pdfBlob: blob, fileName, shareUrl });
 
     } catch (e) {
         console.error('Share PDF failed:', e);
         showToast('Failed to share PDF. Please try Download PDF.', 'error');
-        
+
         // Restore DOM on error
         if (restoreDOM) {
             restoreDOM();
         }
-        
+
         // Restore transform on error
         const scaleContainer = document.getElementById('scaleContainer');
         if (scaleContainer) {
@@ -452,7 +452,7 @@ function openShareFallbackPanel({ pdfBlob, fileName, shareUrl = '' }) {
     document.body.appendChild(modal);
 
     const cleanup = () => {
-        try { URL.revokeObjectURL(blobUrl); } catch (_) {}
+        try { URL.revokeObjectURL(blobUrl); } catch (_) { }
         modal.remove();
     };
 
@@ -486,7 +486,7 @@ function openShareFallbackPanel({ pdfBlob, fileName, shareUrl = '' }) {
             }
             // Some browsers need a small delay before print
             w.onload = () => {
-                try { w.focus(); w.print(); } catch (_) {}
+                try { w.focus(); w.print(); } catch (_) { }
             };
             return;
         }
