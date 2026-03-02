@@ -50,11 +50,12 @@
 
         <!-- Logo Upload -->
         <div class="form-group">
-            <label for="logo" class="form-label">Business Logo (PNG/JPG)</label>
+            <label for="logo" class="form-label">Business Logo (PNG only)</label>
             <div class="file-upload">
-                <input type="file" id="logo" name="logo" accept="image/png,image/jpeg" class="file-input">
+                <input type="file" id="logo" name="logo" accept="image/png" class="file-input">
                 <div class="file-upload-area" id="logoUploadArea">
                     <img id="logoPreview" class="preview-image" style="display:none;" alt="Logo">
+                    <p class="upload-hint" id="logoHint">📷 Tap to upload logo</p>
                     <span class="file-name" id="logoFileName"></span>
                     <button type="button" class="btn btn-secondary btn-sm file-remove" id="removeLogoBtn"
                         style="display:none;">Remove</button>
@@ -64,11 +65,12 @@
 
         <!-- Signature Upload -->
         <div class="form-group">
-            <label for="signature" class="form-label">Signature</label>
+            <label for="signature" class="form-label">Signature (PNG only)</label>
             <div class="file-upload">
-                <input type="file" id="signature" name="signature" accept="image/png,image/jpeg" class="file-input">
+                <input type="file" id="signature" name="signature" accept="image/png" class="file-input">
                 <div class="file-upload-area" id="signatureUploadArea">
                     <img id="signaturePreview" class="preview-image" style="display:none;" alt="Signature">
+                    <p class="upload-hint" id="signatureHint">✍️ Tap to upload signature</p>
                     <span class="file-name" id="signatureFileName"></span>
                     <button type="button" class="btn btn-secondary btn-sm file-remove" id="removeSignatureBtn"
                         style="display:none;">Remove</button>
@@ -84,12 +86,12 @@
         <!-- Upload Stamp -->
         <div class="stamp-upload-section" id="stampUploadSection">
             <div class="form-group">
-                <label for="stamp_upload" class="form-label">Upload Stamp Image</label>
+                <label for="stamp_upload" class="form-label">Upload Stamp Image (PNG only)</label>
                 <div class="file-upload">
-                    <input type="file" id="stamp_upload" name="stamp_upload" accept="image/png,image/jpeg"
-                        class="file-input">
+                    <input type="file" id="stamp_upload" name="stamp_upload" accept="image/png" class="file-input">
                     <div class="file-upload-area" id="stampUploadArea">
                         <img id="stampUploadPreview" class="preview-image" style="display:none;" alt="Stamp">
+                        <p class="upload-hint" id="stampHint">🖼️ Tap to upload stamp</p>
                         <span class="file-name" id="stampFileName"></span>
                         <button type="button" class="btn btn-secondary btn-sm file-remove" id="removeStampUploadBtn"
                             style="display:none;">Remove</button>
@@ -165,19 +167,21 @@
     }
 
     // Restore image previews (server URLs stored in template)
-    function restorePreview(urlKey, previewId, fileNameId, removeBtnId) {
+    function restorePreview(urlKey, previewId, fileNameId, removeBtnId, hintId) {
         if (existing[urlKey]) {
             const img = document.getElementById(previewId);
             const nameEl = document.getElementById(fileNameId);
             const removeBtn = document.getElementById(removeBtnId);
+            const hint = hintId ? document.getElementById(hintId) : null;
             if (img) { img.src = existing[urlKey]; img.style.display = 'block'; }
-            if (nameEl) nameEl.textContent = 'Saved';
+            if (nameEl) nameEl.textContent = '';
+            if (hint) hint.style.display = 'none';
             if (removeBtn) removeBtn.style.display = 'inline-flex';
         }
     }
-    restorePreview('logo_url', 'logoPreview', 'logoFileName', 'removeLogoBtn');
-    restorePreview('signature_url', 'signaturePreview', 'signatureFileName', 'removeSignatureBtn');
-    restorePreview('stamp_url', 'stampUploadPreview', 'stampFileName', 'removeStampUploadBtn');
+    restorePreview('logo_url', 'logoPreview', 'logoFileName', 'removeLogoBtn', 'logoHint');
+    restorePreview('signature_url', 'signaturePreview', 'signatureFileName', 'removeSignatureBtn', 'signatureHint');
+    restorePreview('stamp_url', 'stampUploadPreview', 'stampFileName', 'removeStampUploadBtn', 'stampHint');
 
     // Stamp auto-generate toggle
     document.getElementById('autoGenerateStamp').addEventListener('change', function () {
@@ -186,13 +190,15 @@
         if (!this.checked) { document.getElementById('stampData').value = ''; }
     });
 
-    // Remove buttons
-    function setupRemove(btnId, previewId, fileNameId, templateKey) {
+    // Remove buttons — clear image completely, no file-picker re-open
+    function setupRemove(btnId, inputId, previewId, fileNameId, templateKey, hintId) {
         const btn = document.getElementById(btnId);
         if (!btn) return;
-        btn.addEventListener('click', async () => {
-            const filename = existing[templateKey === 'logo_url' ? 'logo_filename' :
-                templateKey === 'signature_url' ? 'signature_filename' : 'stamp_filename'];
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation(); // prevent bubbling to file-upload-area click
+            const filenameKey = templateKey === 'logo_url' ? 'logo_filename' :
+                templateKey === 'signature_url' ? 'signature_filename' : 'stamp_filename';
+            const filename = existing[filenameKey];
             if (filename) {
                 try {
                     await fetch('/template/remove-asset', {
@@ -202,20 +208,26 @@
                     });
                 } catch (e) { /* ignore */ }
             }
+            // Clear file input so browser doesn't auto-reopen
+            const fileInput = document.getElementById(inputId);
+            if (fileInput) fileInput.value = '';
             const img = document.getElementById(previewId);
             const nameEl = document.getElementById(fileNameId);
+            const hint = hintId ? document.getElementById(hintId) : null;
             if (img) { img.src = ''; img.style.display = 'none'; }
             if (nameEl) nameEl.textContent = '';
+            if (hint) hint.style.display = '';
             delete existing[templateKey];
+            delete existing[filenameKey];
             btn.style.display = 'none';
         });
     }
-    setupRemove('removeLogoBtn', 'logoPreview', 'logoFileName', 'logo_url');
-    setupRemove('removeSignatureBtn', 'signaturePreview', 'signatureFileName', 'signature_url');
-    setupRemove('removeStampUploadBtn', 'stampUploadPreview', 'stampFileName', 'stamp_url');
+    setupRemove('removeLogoBtn', 'logo', 'logoPreview', 'logoFileName', 'logo_url', 'logoHint');
+    setupRemove('removeSignatureBtn', 'signature', 'signaturePreview', 'signatureFileName', 'signature_url', 'signatureHint');
+    setupRemove('removeStampUploadBtn', 'stamp_upload', 'stampUploadPreview', 'stampFileName', 'stamp_url', 'stampHint');
 
-    // File input preview
-    function setupFilePreview(inputId, previewId, fileNameId, removeBtnId) {
+    // File input preview — also hides the hint text when a file is chosen
+    function setupFilePreview(inputId, previewId, fileNameId, removeBtnId, hintId) {
         document.getElementById(inputId).addEventListener('change', function () {
             const file = this.files[0];
             if (!file) return;
@@ -224,16 +236,18 @@
                 const img = document.getElementById(previewId);
                 const nameEl = document.getElementById(fileNameId);
                 const removeBtn = document.getElementById(removeBtnId);
+                const hint = hintId ? document.getElementById(hintId) : null;
                 if (img) { img.src = e.target.result; img.style.display = 'block'; }
-                if (nameEl) nameEl.textContent = file.name;
+                if (nameEl) nameEl.textContent = '';
+                if (hint) hint.style.display = 'none';
                 if (removeBtn) removeBtn.style.display = 'inline-flex';
             };
             reader.readAsDataURL(file);
         });
     }
-    setupFilePreview('logo', 'logoPreview', 'logoFileName', 'removeLogoBtn');
-    setupFilePreview('signature', 'signaturePreview', 'signatureFileName', 'removeSignatureBtn');
-    setupFilePreview('stamp_upload', 'stampUploadPreview', 'stampFileName', 'removeStampUploadBtn');
+    setupFilePreview('logo', 'logoPreview', 'logoFileName', 'removeLogoBtn', 'logoHint');
+    setupFilePreview('signature', 'signaturePreview', 'signatureFileName', 'removeSignatureBtn', 'signatureHint');
+    setupFilePreview('stamp_upload', 'stampUploadPreview', 'stampFileName', 'removeStampUploadBtn', 'stampHint');
 
     // ── Form Submit — Upload files, then save to localStorage ─
     document.getElementById('templateForm').addEventListener('submit', async function (e) {

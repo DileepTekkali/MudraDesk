@@ -222,7 +222,8 @@ a {
     margin-left: 240px;
     padding: 32px;
     max-width: 1200px;
-    overflow-x: hidden; /* Prevent horizontal scrolling */
+    overflow-x: hidden;
+    /* Prevent horizontal scrolling */
 }
 
 .page-header {
@@ -407,6 +408,20 @@ a {
     margin: 0 auto;
 }
 
+/* Upload area hint text — always shown until a file is selected */
+.upload-hint {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 8px 0 4px;
+    pointer-events: none;
+}
+
+/* Ensure Remove button sits above the invisible file input overlay */
+.file-remove {
+    position: relative;
+    z-index: 20;
+}
+
 /* Toggles and Radio */
 .toggle-label {
     display: flex;
@@ -567,12 +582,15 @@ a {
     padding: 20px;
     border-radius: var(--radius-lg);
     margin-bottom: 24px;
-    overflow-y: auto; /* Allow vertical scrolling */
-    overflow-x: hidden; /* Prevent horizontal scrolling */
+    overflow-y: auto;
+    /* Allow vertical scrolling */
+    overflow-x: hidden;
+    /* Prevent horizontal scrolling */
     position: relative;
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* Align to top for vertical scroll */
+    align-items: flex-start;
+    /* Align to top for vertical scroll */
     /* Height set by JavaScript based on available viewport */
     min-height: 400px;
 }
@@ -581,15 +599,19 @@ a {
 /* Using !important to override any conflicting rules */
 #scaleContainer,
 .preview-scale-container {
-    position: relative !important; /* Normal flow, NOT absolute */
+    position: relative !important;
+    /* Normal flow, NOT absolute */
     top: auto !important;
     left: auto !important;
-    transform: none !important; /* No centering transform */
+    transform: none !important;
+    /* No centering transform */
     width: 100% !important;
     display: flex !important;
     flex-direction: column !important;
-    align-items: center !important; /* Center pages horizontally */
-    gap: 16px !important; /* Space between pages */
+    align-items: center !important;
+    /* Center pages horizontally */
+    gap: 16px !important;
+    /* Space between pages */
 }
 
 /* Page shell - wrapper that holds scaled dimensions */
@@ -612,7 +634,8 @@ a {
     /* Fixed A4 dimensions in pixels (794px × 1123px at 96 DPI) */
     width: 794px;
     height: 1153px;
-    padding: 60px 50px; /* 15mm margins in pixels */
+    padding: 60px 50px;
+    /* 15mm margins in pixels */
     margin: 0;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     position: relative;
@@ -669,66 +692,68 @@ a {
 }
 
 /* ========= Quotation auto-fit (subject 1–3 lines) ========= */
-.doc-quotation .heading-highlight{
-  color:#0f172a;
-  font-weight: 800;
-  letter-spacing: .3px;
+.doc-quotation .heading-highlight {
+    color: #0f172a;
+    font-weight: 800;
+    letter-spacing: .3px;
 }
 
 /* Bold headings like "Owner:" (Subject / Quotation For) */
-.doc-quotation .q-heading{
-  color:#0f172a;
-  font-weight: 800;
-  letter-spacing: .3px;
+.doc-quotation .q-heading {
+    color: #0f172a;
+    font-weight: 800;
+    letter-spacing: .3px;
 }
 
-.doc-quotation .bill-header.bill-header-section{
-  margin-bottom: 18px !important;
-  padding-bottom: 18px !important;
+.doc-quotation .bill-header.bill-header-section {
+    margin-bottom: 18px !important;
+    padding-bottom: 18px !important;
 }
 
-.doc-quotation .quotation-subject{
-  margin: 6px 0 12px 0;
-  max-width: 560px;
+.doc-quotation .quotation-subject {
+    margin: 6px 0 12px 0;
+    max-width: 560px;
 }
 
-.doc-quotation .quotation-subject-line{
-  margin: 0;
-  font-size: calc(14px * var(--q-subject-scale));
-  color:#0f172a;
-  line-height: 1.35;
+.doc-quotation .quotation-subject-line {
+    margin: 0;
+    font-size: calc(14px * var(--q-subject-scale));
+    color: #0f172a;
+    line-height: 1.35;
 }
 
 /* Cross-browser 3-line clamp (no -webkit-line-clamp; avoids random hiding on refresh) */
-.doc-quotation .quotation-subject-text{
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  display: inline-block;
-  max-height: calc(1.35em * 3);
-  overflow: hidden;
+.doc-quotation .quotation-subject-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    display: inline-block;
+    max-height: calc(1.35em * 3);
+    overflow: hidden;
 }
 
 /* Reduce spacing a bit when subject exists (keeps stamp/signature fitting) */
 .doc-quotation .totals-section,
-.doc-quotation .payment-section{
-  margin-top: 10px !important;
+.doc-quotation .payment-section {
+    margin-top: 10px !important;
 }
 
 /* Signature / stamp area: allow wrapping & smaller captions in quotation */
-.doc-quotation .signatures{
-  gap: 14px !important;
-  flex-wrap: wrap;
-}
-.doc-quotation .signature-box .label,
-.doc-quotation .stamp-box .label{
-  font-size: calc(11px * var(--q-scale));
+.doc-quotation .signatures {
+    gap: 14px !important;
+    flex-wrap: wrap;
 }
 
-.doc-quotation .signature-section{
-  margin-top: calc(32px * var(--q-scale)) !important;
+.doc-quotation .signature-box .label,
+.doc-quotation .stamp-box .label {
+    font-size: calc(11px * var(--q-scale));
 }
-.doc-quotation .signature-section > div{
-  width: calc(170px * var(--q-scale)) !important;
+
+.doc-quotation .signature-section {
+    margin-top: calc(32px * var(--q-scale)) !important;
+}
+
+.doc-quotation .signature-section>div {
+    width: calc(170px * var(--q-scale)) !important;
 }
 
 /* ========= Overflow fixes for Subject, Address, Item names ========= */
@@ -738,7 +763,8 @@ a {
     margin-bottom: 20px;
     padding: 12px 15px;
     background-color: #f8fafc;
-    border-left: none !important;  /* Removed left accent border */
+    border-left: none !important;
+    /* Removed left accent border */
     border-radius: 4px;
 }
 
@@ -909,7 +935,7 @@ a {
 
 /* Quotation table - smaller fonts */
 .doc-quotation table thead th {
-    font-size:  13.75px !important;
+    font-size: 13.75px !important;
     padding: 10px !important;
 }
 
@@ -924,26 +950,29 @@ a {
 
 /* Quotation totals section - smaller fonts */
 .doc-quotation .totals-section {
-    margin-bottom: 20px;  /* Reduced from 40px to 50% */
+    margin-bottom: 20px;
+    /* Reduced from 40px to 50% */
 }
 
-.doc-quotation .totals-section > div > div {
+.doc-quotation .totals-section>div>div {
     font-size: 13px !important;
     padding: 6px 0 !important;
 }
 
-.doc-quotation .totals-section > div > div:last-child {
+.doc-quotation .totals-section>div>div:last-child {
     font-size: 16px !important;
     padding: 10px 0 !important;
 }
 
 /* Totals and signature - compact spacing for quotation */
 .quotation-totals-sig {
-    margin-top: 15px;  /* Reduced from 30px to 50% */
+    margin-top: 15px;
+    /* Reduced from 30px to 50% */
 }
 
 .quotation-signature {
-    margin-top: 12.5px !important;  /* Reduced from 25px to 50% */
+    margin-top: 12.5px !important;
+    /* Reduced from 25px to 50% */
 }
 
 /* Non-quotation default header styles */
@@ -1001,78 +1030,85 @@ a {
    ============================ */
 
 /* (2) QUOTATION: remove left blue line beside Subject (keep grey background) */
-.doc-quotation .quotation-subject{
+.doc-quotation .quotation-subject {
     border-left: none !important;
 }
 
 /* (3) INVOICE: match Quotation text sizing (headers + Bill To section + table + totals) */
-.doc-invoice table thead th{
-    font-size:  13.75px !important;
+.doc-invoice table thead th {
+    font-size: 13.75px !important;
     padding: 10px !important;
 }
-.doc-invoice table tbody td{
+
+.doc-invoice table tbody td {
     font-size: 13px !important;
     padding: 10px !important;
 }
 
 /* Bill To section sizing to match quotation */
-.doc-invoice .q-heading{
+.doc-invoice .q-heading {
     font-size: 13px;
     font-weight: 800;
     letter-spacing: .3px;
-    color:#0f172a;
+    color: #0f172a;
 }
-.doc-invoice .customer-name{
+
+.doc-invoice .customer-name {
     font-size: 15px;
     margin-bottom: 6px;
 }
-.doc-invoice .customer-mobile{
+
+.doc-invoice .customer-mobile {
     font-size: 12px;
 }
-.doc-invoice .customer-address{
+
+.doc-invoice .customer-address {
     font-size: 12px;
     max-width: 350px;
 }
 
 /* Totals sizing to match quotation */
-.doc-invoice .totals-section > div > div{
+.doc-invoice .totals-section>div>div {
     font-size: 13px !important;
     padding: 6px 0 !important;
 }
-.doc-invoice .totals-section > div > div:last-child{
+
+.doc-invoice .totals-section>div>div:last-child {
     font-size: 16px !important;
     padding: 10px 0 !important;
 }
 
 
 /* Small button (used for remove logo/signature) */
-.btn-sm{
+.btn-sm {
     padding: 6px 10px;
     font-size: 12px;
     border-radius: 8px;
 }
-.file-remove{
+
+.file-remove {
     margin-top: 8px;
 }
 
 
 /* ================= FINAL OVERRIDES ================= */
 /* QUOTATION: remove blue left line beside Subject (ensure wins over base rule) */
-.doc-quotation .quotation-subject{
+.doc-quotation .quotation-subject {
     border-left: none !important;
 }
 
 /* QUOTATION: make Subject/Quotation For labels bold */
-.doc-quotation .q-heading{
+.doc-quotation .q-heading {
     font-weight: 800;
 }
 
 /* INVOICE: totals section text sizes match quotation (override inline sizes) */
-.doc-invoice .totals-section > div > div{
+.doc-invoice .totals-section>div>div {
     font-size: 13px !important;
     padding: 6px 0 !important;
 }
-.doc-invoice .totals-section div[style*="font-size"]{
-    font-size: 16px !important; /* Total row */
-}
 
+.doc-invoice .totals-section div[style*="font-size"] {
+    font-size: 16px !important;
+    /* Total row */
+}

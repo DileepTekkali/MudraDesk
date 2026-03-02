@@ -63,14 +63,13 @@ function initStampGenerator() {
 
     if (autoGenerateToggle.checked) generateStamp();
 
+    // ─── Main entry ──────────────────────────────────────────────────────────
     function generateStamp() {
         if (!autoGenerateToggle.checked) return;
 
         const name = (stampNameInput?.value || 'SEAL').toUpperCase();
         const place = (stampPlaceInput?.value || '').toUpperCase();
 
-        // Respect the canvas size defined in HTML (keeps preview crisp and consistent)
-        // (Do NOT override width/height here.)
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const centerX = canvas.width / 2;
@@ -80,172 +79,183 @@ function initStampGenerator() {
         ctx.strokeStyle = stampColor;
         ctx.fillStyle = stampColor;
 
-        // Only circular stamps
         drawCircleStamp(ctx, centerX, centerY, name, place, stampColor);
 
         stampDataInput.value = canvas.toDataURL('image/png');
     }
 
-    function drawCircleStamp(ctx, centerX, centerY, name, place, color) {
-        // Radius adapts to canvas size so long text stays inside neatly
-        const pad = 10;
-        const maxR = Math.min(canvas.width, canvas.height) / 2 - pad;
-        const radius = Math.max(60, Math.min(82, maxR));
-        const innerRadius = Math.max(42, radius - 22);
-        const textRadius = (radius + innerRadius) / 2;
+    // ─── Helpers ─────────────────────────────────────────────────────────────
 
-        // Draw Circles
-        ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.stroke();
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2); ctx.stroke();
-
-        // Start with larger font and reduce until BOTH text and stars fit without colliding.
-        let fontSize = 16;
-        const minFontSize = 6;
-        // Keep text compact so stars can sit close to the text while still leaving a *single space* gap.
-        const kerningFactor = 1.06;
-
-        function angleSpanForText(text, fSize) {
-            ctx.font = `bold ${fSize}px Inter`;
-            // Width-to-angle approximation on the arc. KerningFactor provides breathing room.
-            return (ctx.measureText(text).width / textRadius) * kerningFactor;
-        }
-
-        function computeFit(fSize) {
-            const topAngle = angleSpanForText(name, fSize);
-            const botAngle = place ? angleSpanForText(place, fSize) : 0;
-
-            // "Single space" around stars: translate one literal space into angular margin on the arc.
-            // This updates with font size so it stays exactly like one space, even for long text.
-            ctx.font = `bold ${fSize}px Inter`;
-            const marginAngle = (ctx.measureText(' ').width / textRadius);
-
-            // Star width in angular terms (+ 1-space margin so it doesn't visually touch the text)
-            const starAngle = (ctx.measureText('★').width / textRadius) + marginAngle;
-
-            // Arc bounds (top centered at -PI/2, bottom centered at +PI/2)
-            const topCenter = -Math.PI / 2;
-            const botCenter = Math.PI / 2;
-
-            const topRightEdge = topCenter + topAngle / 2;
-            const topLeftEdge = topCenter - topAngle / 2;
-            const botRightEdge = botCenter - botAngle / 2;
-            const botLeftEdge = botCenter + botAngle / 2;
-
-            // Available gaps on right (around angle 0) and left (around PI)
-            // Right gap: from topRightEdge to botRightEdge (wrapping through 0)
-            let rightStart = topRightEdge;
-            let rightEnd = botRightEdge;
-            if (rightEnd < rightStart) rightEnd += Math.PI * 2;
-            const rightGap = rightEnd - rightStart;
-
-            // Left gap: from botLeftEdge to topLeftEdge (wrapping through PI)
-            let leftStart = botLeftEdge;
-            let leftEnd = topLeftEdge;
-            if (leftEnd < leftStart) leftEnd += Math.PI * 2;
-            const leftGap = leftEnd - leftStart;
-
-            // Need space for 1 star on each side
-            const need = starAngle * 2;
-            const canPlaceStars = (rightGap >= need) && (leftGap >= need);
-
-            // Also ensure total coverage isn't excessive (keeps things visually clean)
-            const total = topAngle + botAngle + (starAngle * 2) + (marginAngle * 2);
-            const withinCircle = total <= (Math.PI * 2 * 0.94);
-
-            return {
-                topAngle,
-                botAngle,
-                starAngle,
-                marginAngle,
-                canPlaceStars,
-                withinCircle,
-                // star centers
-                rightCenter: rightStart + rightGap / 2,
-                leftCenter: leftStart + leftGap / 2
-            };
-        }
-
-        let fit = computeFit(fontSize);
-        while ((!(fit.canPlaceStars && fit.withinCircle)) && fontSize > minFontSize) {
-            fontSize -= 0.5;
-            fit = computeFit(fontSize);
-        }
-
-        ctx.font = `bold ${fontSize}px Inter`;
-
-        // Draw top text (business name)
-        renderArcText(ctx, name, centerX, centerY, textRadius, color, `bold ${fontSize}px Inter`, false, fit.topAngle);
-        
-        // Draw bottom text (place) if exists
-        if (place) {
-            renderArcText(ctx, place, centerX, centerY, textRadius, color, `bold ${fontSize}px Inter`, true, fit.botAngle);
-        }
-
-        ctx.font = `bold ${fontSize}px Inter`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Stars automatically move into the available gaps so they never collide with text
-        const stars = [
-            { angle: normalizeAngle(fit.leftCenter), rotation: Math.PI },
-            { angle: normalizeAngle(fit.rightCenter), rotation: 0 }
-        ];
-
-        stars.forEach(star => {
-            ctx.save();
-            const x = centerX + Math.cos(star.angle) * textRadius;
-            const y = centerY + Math.sin(star.angle) * textRadius;
-            ctx.translate(x, y);
-            ctx.rotate(star.rotation);
-            ctx.fillText('★', 0, 0);
-            ctx.restore();
-        });
+    /**
+     * Total arc angle (radians) that `text` occupies at `fontSize` on a
+     * circle of radius `r`. Each character is measured individually and a
+     * small letter-spacing factor (4 %) is added so glyphs never touch.
+     */
+    function textArcAngle(text, fontSize, r) {
+        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+        let totalWidth = 0;
+        for (const ch of text) totalWidth += ctx.measureText(ch).width;
+        return (totalWidth * 1.04) / r;
     }
 
-    function normalizeAngle(a) {
-        const twoPi = Math.PI * 2;
-        let out = a % twoPi;
-        if (out < -Math.PI) out += twoPi;
-        if (out > Math.PI) out -= twoPi;
-        return out;
+    /**
+     * Arc angle for a single star glyph plus one space of padding on each
+     * side, so stars are always visually separated from text.
+     */
+    function starArcAngle(fontSize, r) {
+        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+        const spaceW = ctx.measureText(' ').width;
+        const starW = ctx.measureText('★').width;
+        return (starW + spaceW * 2) / r;
     }
 
-    // New unified rendering function to ensure consistent spacing
-    function renderArcText(ctx, str, cx, cy, radius, color, font, isBottom, totalAngle) {
+    /**
+     * Draw text along a clockwise arc.
+     * `arcStart` = angle of the first character's LEFT edge.
+     * Characters are placed sequentially using their real measured widths.
+     */
+    function drawArcText(text, cx, cy, r, arcStart, color, fontSize) {
         ctx.save();
-        ctx.font = font;
+        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
         ctx.fillStyle = color;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        const anglePerChar = totalAngle / Math.max(str.length, 1);
-        let startAngle;
+        let angle = arcStart;
+        for (const ch of text) {
+            const cw = ctx.measureText(ch).width * 1.04;
+            const halfAngle = cw / 2 / r;
+            const charAngle = angle + halfAngle;
 
-        if (!isBottom) {
-            // Top: centered north (-PI/2)
-            startAngle = -Math.PI / 2 - (totalAngle / 2) + (anglePerChar / 2);
-        } else {
-            // Bottom: centered south (PI/2), reversing for readable LTR
-            startAngle = Math.PI / 2 + (totalAngle / 2) - (anglePerChar / 2);
+            ctx.save();
+            ctx.translate(
+                cx + Math.cos(charAngle) * r,
+                cy + Math.sin(charAngle) * r
+            );
+            ctx.rotate(charAngle + Math.PI / 2);
+            ctx.fillText(ch, 0, 0);
+            ctx.restore();
+
+            angle += cw / r;
+        }
+        ctx.restore();
+    }
+
+    /**
+     * Draw text along a counter-clockwise arc (used for bottom arc so the
+     * reading direction stays left-to-right).
+     * `arcStart` = angle of the first character's RIGHT edge (rightmost char first).
+     * The string is reversed before iteration, so visual order is correct.
+     */
+    function drawArcTextReversed(text, cx, cy, r, arcStart, color, fontSize) {
+        ctx.save();
+        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Reverse so we place characters from right → left while reading left → right
+        const reversed = [...text].reverse().join('');
+        let angle = arcStart;
+        for (const ch of reversed) {
+            const cw = ctx.measureText(ch).width * 1.04;
+            const halfAngle = cw / 2 / r;
+            const charAngle = angle - halfAngle;   // counter-clockwise
+
+            ctx.save();
+            ctx.translate(
+                cx + Math.cos(charAngle) * r,
+                cy + Math.sin(charAngle) * r
+            );
+            ctx.rotate(charAngle - Math.PI / 2);
+            ctx.fillText(ch, 0, 0);
+            ctx.restore();
+
+            angle -= cw / r;
+        }
+        ctx.restore();
+    }
+
+    // ─── Main stamp drawing ──────────────────────────────────────────────────
+    function drawCircleStamp(ctx, centerX, centerY, name, place, color) {
+        const pad = 12;
+        const maxR = Math.min(canvas.width, canvas.height) / 2 - pad;
+        const radius = Math.max(60, Math.min(84, maxR));
+        const innerRadius = Math.max(44, radius - 20);
+        const textRadius = (radius + innerRadius) / 2;
+
+        // Draw outer + inner circles
+        ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2); ctx.stroke();
+
+        // ── Auto-size font so all content fits within 92 % of the circle ──
+        let fontSize = 14;
+        const minFontSize = 7;
+
+        function totalConsumed(fs) {
+            return textArcAngle(name, fs, textRadius)
+                + (place ? textArcAngle(place, fs, textRadius) : 0)
+                + starArcAngle(fs, textRadius) * 2;
         }
 
-        for (let i = 0; i < str.length; i++) {
-            const charAngle = isBottom ? (startAngle - i * anglePerChar) : (startAngle + i * anglePerChar);
+        while (totalConsumed(fontSize) > Math.PI * 2 * 0.92 && fontSize > minFontSize) {
+            fontSize -= 0.5;
+        }
+
+        // ── Compute exact positions ────────────────────────────────────────
+        const topAngle = textArcAngle(name, fontSize, textRadius);
+        const botAngle = place ? textArcAngle(place, fontSize, textRadius) : 0;
+        const sa = starArcAngle(fontSize, textRadius);
+
+        // Remaining arc is divided equally into the two gap regions
+        const freeArc = Math.max(0, Math.PI * 2 - topAngle - botAngle - sa * 2);
+        const gapEach = freeArc / 2;
+
+        // North pole = −π/2.  Top text is centred there.
+        const topStart = -Math.PI / 2 - topAngle / 2;
+        const topEnd = topStart + topAngle;
+
+        // Right gap → right star centre
+        const rightStarCenter = topEnd + gapEach / 2 + sa / 2;
+
+        // Bottom text is centred on the south pole (π/2).
+        // For the reversed-draw function we need the rightmost edge.
+        const botRightEdge = Math.PI / 2 + botAngle / 2;
+        const botLeftEdge = botRightEdge - botAngle;
+
+        // Left gap → left star centre
+        const leftStarCenter = botRightEdge + gapEach / 2 + sa / 2;
+
+        // ── Draw text ──────────────────────────────────────────────────────
+        drawArcText(name, centerX, centerY, textRadius, topStart, color, fontSize);
+
+        if (place) {
+            drawArcTextReversed(place, centerX, centerY, textRadius, botRightEdge, color, fontSize);
+        }
+
+        // ── Draw stars ─────────────────────────────────────────────────────
+        ctx.save();
+        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        for (const starAngle of [rightStarCenter, leftStarCenter]) {
             ctx.save();
-            ctx.translate(cx + Math.cos(charAngle) * radius, cy + Math.sin(charAngle) * radius);
-            if (!isBottom) {
-                ctx.rotate(charAngle + Math.PI / 2);
-            } else {
-                ctx.rotate(charAngle - Math.PI / 2);
-            }
-            ctx.fillText(str[i], 0, 0);
+            ctx.translate(
+                centerX + Math.cos(starAngle) * textRadius,
+                centerY + Math.sin(starAngle) * textRadius
+            );
+            ctx.rotate(starAngle + Math.PI / 2);
+            ctx.fillText('★', 0, 0);
             ctx.restore();
         }
         ctx.restore();
     }
 
+    // ─── Debounce ────────────────────────────────────────────────────────────
     function debounce(func, wait) {
         let timeout;
         return function (...args) {
