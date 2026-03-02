@@ -166,8 +166,18 @@
         document.getElementById('stampUploadSection').style.display = 'none';
     }
 
+    // ── Helper: lock/unlock the invisible file-input overlay ─────────────────
+    // When an image IS shown, we disable pointer-events on the file input so the
+    // Remove button (and everything else) can receive taps freely — the OS-level
+    // file picker can no longer fire from underneath. When the image is removed we
+    // re-enable pointer-events so the user can tap the area to upload again.
+    function setFileInputActive(inputId, active) {
+        const fi = document.getElementById(inputId);
+        if (fi) fi.style.pointerEvents = active ? 'auto' : 'none';
+    }
+
     // Restore image previews (server URLs stored in template)
-    function restorePreview(urlKey, previewId, fileNameId, removeBtnId, hintId) {
+    function restorePreview(urlKey, previewId, fileNameId, removeBtnId, hintId, inputId) {
         if (existing[urlKey]) {
             const img = document.getElementById(previewId);
             const nameEl = document.getElementById(fileNameId);
@@ -177,11 +187,13 @@
             if (nameEl) nameEl.textContent = '';
             if (hint) hint.style.display = 'none';
             if (removeBtn) removeBtn.style.display = 'inline-flex';
+            // Lock file input so Remove button can be tapped without triggering picker
+            setFileInputActive(inputId, false);
         }
     }
-    restorePreview('logo_url', 'logoPreview', 'logoFileName', 'removeLogoBtn', 'logoHint');
-    restorePreview('signature_url', 'signaturePreview', 'signatureFileName', 'removeSignatureBtn', 'signatureHint');
-    restorePreview('stamp_url', 'stampUploadPreview', 'stampFileName', 'removeStampUploadBtn', 'stampHint');
+    restorePreview('logo_url', 'logoPreview', 'logoFileName', 'removeLogoBtn', 'logoHint', 'logo');
+    restorePreview('signature_url', 'signaturePreview', 'signatureFileName', 'removeSignatureBtn', 'signatureHint', 'signature');
+    restorePreview('stamp_url', 'stampUploadPreview', 'stampFileName', 'removeStampUploadBtn', 'stampHint', 'stamp_upload');
 
     // Stamp auto-generate toggle
     document.getElementById('autoGenerateStamp').addEventListener('change', function () {
@@ -190,12 +202,18 @@
         if (!this.checked) { document.getElementById('stampData').value = ''; }
     });
 
-    // Remove buttons — clear image completely, no file-picker re-open
+    // Remove buttons — clear image & show hint again; never re-open file picker
     function setupRemove(btnId, inputId, previewId, fileNameId, templateKey, hintId) {
         const btn = document.getElementById(btnId);
         if (!btn) return;
         btn.addEventListener('click', async (e) => {
-            e.stopPropagation(); // prevent bubbling to file-upload-area click
+            e.preventDefault();
+            e.stopPropagation();
+            // Temporarily disable the file input so the picker cannot fire
+            // even if the event somehow propagates to it
+            const fileInput = document.getElementById(inputId);
+            if (fileInput) { fileInput.disabled = true; fileInput.value = ''; }
+
             const filenameKey = templateKey === 'logo_url' ? 'logo_filename' :
                 templateKey === 'signature_url' ? 'signature_filename' : 'stamp_filename';
             const filename = existing[filenameKey];
@@ -206,27 +224,30 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ filename })
                     });
-                } catch (e) { /* ignore */ }
+                } catch (_) { /* ignore */ }
             }
-            // Clear file input so browser doesn't auto-reopen
-            const fileInput = document.getElementById(inputId);
-            if (fileInput) fileInput.value = '';
+
+            // Clear UI
             const img = document.getElementById(previewId);
             const nameEl = document.getElementById(fileNameId);
             const hint = hintId ? document.getElementById(hintId) : null;
             if (img) { img.src = ''; img.style.display = 'none'; }
             if (nameEl) nameEl.textContent = '';
-            if (hint) hint.style.display = '';
+            if (hint) hint.style.display = '';   // show "Tap to upload" again
             delete existing[templateKey];
             delete existing[filenameKey];
             btn.style.display = 'none';
+
+            // Re-enable & unlock file input so user can tap to upload again
+            if (fileInput) { fileInput.disabled = false; }
+            setFileInputActive(inputId, true);
         });
     }
     setupRemove('removeLogoBtn', 'logo', 'logoPreview', 'logoFileName', 'logo_url', 'logoHint');
     setupRemove('removeSignatureBtn', 'signature', 'signaturePreview', 'signatureFileName', 'signature_url', 'signatureHint');
     setupRemove('removeStampUploadBtn', 'stamp_upload', 'stampUploadPreview', 'stampFileName', 'stamp_url', 'stampHint');
 
-    // File input preview — also hides the hint text when a file is chosen
+    // File input change — show preview, hide hint, lock file input overlay
     function setupFilePreview(inputId, previewId, fileNameId, removeBtnId, hintId) {
         document.getElementById(inputId).addEventListener('change', function () {
             const file = this.files[0];
@@ -241,6 +262,8 @@
                 if (nameEl) nameEl.textContent = '';
                 if (hint) hint.style.display = 'none';
                 if (removeBtn) removeBtn.style.display = 'inline-flex';
+                // Lock file input — Remove button must be tappable now
+                setFileInputActive(inputId, false);
             };
             reader.readAsDataURL(file);
         });
