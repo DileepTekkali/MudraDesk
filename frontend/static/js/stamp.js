@@ -128,13 +128,25 @@ function initStampGenerator() {
         ctx.textBaseline = 'middle';
 
         const totalAngle = textArcAngle(text, fontSize, r);
-        // Start angle: subtract half of total angle to center it on midAngle
-        let currentAngle = midAngle - totalAngle / 2;
+        let currentAngle;
+
+        if (!isBottom) {
+            // TOP: Start at the left edge and move clockwise (LR direction)
+            currentAngle = midAngle - totalAngle / 2;
+        } else {
+            // BOTTOM: Start at the left edge and move clockwise to read L->R
+            // Wait, for bottom, we want to go from the 9 o'clock side (larger angle) to 3 o'clock side (smaller angle).
+            // Let's stick to the simplest: if it's the bottom, we start "left" and move "right".
+            // Visually "left" on the bottom curve is midAngle + totalAngle/2.
+            currentAngle = midAngle + totalAngle / 2;
+        }
 
         for (const ch of text) {
             const cw = ctx.measureText(ch).width * 1.04;
             const halfAngle = cw / 2 / r;
-            const charAngle = currentAngle + halfAngle;
+
+            // charAngle is the center of the current character
+            const charAngle = isBottom ? (currentAngle - halfAngle) : (currentAngle + halfAngle);
 
             ctx.save();
             ctx.translate(
@@ -146,14 +158,18 @@ function initStampGenerator() {
                 // Top: heads-out (rotate char by angle + 90 deg)
                 ctx.rotate(charAngle + Math.PI / 2);
             } else {
-                // Bottom: heads-in (rotate char by angle - 90 deg) — readable L-to-R
+                // Bottom: heads-in (rotate char by angle - 90 deg)
                 ctx.rotate(charAngle - Math.PI / 2);
             }
 
             ctx.fillText(ch, 0, 0);
             ctx.restore();
 
-            currentAngle += (cw / r);
+            if (!isBottom) {
+                currentAngle += (cw / r); // Move clockwise for top
+            } else {
+                currentAngle -= (cw / r); // Move counter-clockwise for bottom (to go L->R)
+            }
         }
         ctx.restore();
     }
