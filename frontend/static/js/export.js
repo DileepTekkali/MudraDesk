@@ -47,89 +47,80 @@ async function downloadPDF() {
     }
 
     showToast(`Generating PDF (${pages.length} pages)...`, 'info');
-
     try {
-        // Remove page-shell wrappers temporarily for clean capture
-        const shellWrappers = [];
-        pages.forEach(page => {
-            if (page.parentElement.classList.contains('page-shell')) {
-                const shell = page.parentElement;
-                shellWrappers.push({
-                    shell: shell,
-                    parent: shell.parentElement,
-                    nextSibling: shell.nextSibling,
-                    transform: page.style.transform
-                });
-                // Remove transform and unwrap
-                page.style.transform = 'none';
-                shell.parentElement.insertBefore(page, shell);
-                shell.remove();
-            }
-        });
-
-        // Ensure custom fonts are loaded
-        if (document.fonts && document.fonts.ready) {
-            try { await document.fonts.ready; } catch (_) { }
+        // Wait for fonts (optional but helps with text rendering)
+        if (document.fonts?.ready) {
+            await document.fonts.ready.catch(() => { });
         }
 
         const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
-            format: 'a4'
+            format: 'a4',
+            hotfixes: ['px_scaling']   // helps when mixing px/mm
         });
 
-        const pdfWidth = 210;
+        const pageWidth = pdf.internal.pageSize.getWidth();   // ≈ 210 mm
+        const pageHeight = pdf.internal.pageSize.getHeight();  // ≈ 297 mm
+
+        // A4 in pixels at 96 dpi ≈ 794 × 1123
+        // We use scale 2–3 for most cases (balance quality vs memory)
+        const scale = 2.5;
 
         for (let i = 0; i < pages.length; i++) {
-            if (i > 0) pdf.addPage();
-            const page = pages[i];
-
-            // Capture at full resolution
-            const canvas = await html2canvas(page, {
-                scale: 5.0,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff',
-                width: 794,
-                height: 1153
-            });
-
-            const imgWidth = pdfWidth;
-            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-            pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, imgWidth, imgHeight);
-        }
-
-        // Restore page-shell wrappers
-        shellWrappers.forEach(({ shell, parent, nextSibling, transform }, index) => {
-            const page = pages[index];
-            if (nextSibling) {
-                parent.insertBefore(shell, nextSibling);
-            } else {
-                parent.appendChild(shell);
+            if (i > 0) {
+                pdf.addPage();
             }
-            shell.appendChild(page);
-            page.style.transform = transform;
-        });
 
-        // Restore original DOM if we paginated temporarily
-        if (restoreDOM) {
-            restoreDOM();
+            const pageElement = pages[i];
+
+            // Temporary visibility / positioning fix (if needed)
+            const wasHidden = pageElement.style.display === 'none';
+            if (wasHidden) pageElement.style.display = 'block';
+
+            try {
+                const canvas = await html2canvas(pageElement, {
+                    scale: scale,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    windowWidth: 794,           // target A4 @ ~96dpi
+                    windowHeight: 1123,
+                    logging: false,
+                    removeContainer: true       // cleaner
+                });
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+                // Calculate real height in mm (preserves aspect ratio)
+                const imgHeightInMM = (canvas.height * pageWidth) / canvas.width;
+
+                pdf.addImage(
+                    imgData,
+                    'JPEG',
+                    0,           // x
+                    0,           // y
+                    pageWidth,
+                    imgHeightInMM
+                );
+
+            } finally {
+                if (wasHidden) pageElement.style.display = 'none';
+            }
         }
 
-        // Save PDF
+        // Trigger download
         pdf.save(fileName.endsWith('.pdf') ? fileName : fileName + '.pdf');
 
-        setTimeout(() => {
-            showToast('PDF downloaded successfully!', 'success');
-        }, 500);
+        // Optional feedback
+        if (typeof showToast === 'function') {
+            setTimeout(() => showToast('PDF downloaded successfully!', 'success'), 300);
+        }
 
-    } catch (error) {
-        console.error('PDF generation error:', error);
-        showToast('Failed to generate PDF', 'error');
-
-        if (restoreDOM) {
-            restoreDOM();
+    } catch (err) {
+        console.error('PDF generation failed:', err);
+        if (typeof showToast === 'function') {
+            showToast('Failed to generate PDF: ' + err.message, 'error');
         }
     }
 }
