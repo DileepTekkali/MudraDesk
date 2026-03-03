@@ -1,7 +1,6 @@
 /* ============================================
    Invoice Generator - Clean Professional Theme
    ============================================ */
-
 /* CSS Variables */
 :root {
     /* Colors - Light Professional Theme */
@@ -9,21 +8,17 @@
     --bg-secondary: #ffffff;
     --bg-card: #ffffff;
     --bg-input: #ffffff;
-
     /* Branding */
     --brand-primary: #2563eb;
     --brand-dark: #1e40af;
     --brand-light: #dbeafe;
-
     /* Text Colors */
     --text-primary: #0f172a;
     --text-secondary: #64748b;
     --text-muted: #94a3b8;
-
     /* Borders */
     --border-color: #e2e8f0;
     --border-focus: #2563eb;
-
     /* Status */
     --success: #10b981;
     --success-bg: #dcfce7;
@@ -31,18 +26,20 @@
     --warning-bg: #fef3c7;
     --error: #ef4444;
     --error-bg: #fee2e2;
-
     /* Spacing & Radius */
     --radius-sm: 4px;
     --radius-md: 6px;
     --radius-lg: 8px;
-
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-
     /* Font */
     --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Form file fields css */
+.hintTexts {
+    display: none;
 }
 
 /* ---------------- Share fallback modal ---------------- */
@@ -598,7 +595,7 @@ a {
 
 /* Totals */
 .totals-section {
-    margin-top: 24px;
+    /* margin-top: 24px; */
     border-top: 1px solid var(--border-color);
     padding-top: 24px;
 }
@@ -800,7 +797,6 @@ a {
 }
 
 /* ========= Overflow fixes for Subject, Address, Item names ========= */
-
 /* Subject text wrapping (screen preview - full wrap, no clamp) */
 .quotation-subject {
     margin-bottom: 20px;
@@ -870,7 +866,6 @@ a {
 }
 
 /* ========= Compact quotation layout ========= */
-
 /* Quotation header - reduce height */
 .quotation-header {
     display: flex;
@@ -1067,11 +1062,9 @@ a {
     font-size: 17px;
 }
 
-
 /* ============================
    FIXES (Invoice vs Quotation)
    ============================ */
-
 /* (2) QUOTATION: remove left blue line beside Subject (keep grey background) */
 .doc-quotation .quotation-subject {
     border-left: none !important;
@@ -1121,7 +1114,6 @@ a {
     padding: 10px 0 !important;
 }
 
-
 /* Small button (used for remove logo/signature) */
 .btn-sm {
     padding: 6px 10px;
@@ -1132,7 +1124,6 @@ a {
 .file-remove {
     margin-top: 8px;
 }
-
 
 /* ================= FINAL OVERRIDES ================= */
 /* QUOTATION: remove blue left line beside Subject (ensure wins over base rule) */

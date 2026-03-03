@@ -1,16 +1,13 @@
 // Main App JavaScript
-
 document.addEventListener('DOMContentLoaded', function () {
     // Mobile Navigation Toggle
     const navToggle = document.getElementById('navToggle');
     const sidebar = document.getElementById('sidebar');
-
     if (navToggle && sidebar) {
         navToggle.addEventListener('click', function () {
             sidebar.classList.toggle('open');
             document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
         });
-
         // Close sidebar when clicking outside
         document.addEventListener('click', function (e) {
             if (sidebar.classList.contains('open') &&
@@ -21,81 +18,64 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
-
     // File Upload Preview
     const logoInput = document.getElementById('logo');
     const signatureInput = document.getElementById('signature');
-
-    if (logoInput) {
-        logoInput.addEventListener('change', function (e) {
-            previewFile(e.target, 'logoUploadArea', 'logoPreview');
-        });
-    }
-
-    if (signatureInput) {
-        signatureInput.addEventListener('change', function (e) {
-            previewFile(e.target, 'signatureUploadArea', 'signaturePreview');
-        });
-    }
-
-    
+    // Removed duplicate change listeners as they are handled in page-specific script
 
     // Remove Logo / Signature (sets hidden flags so backend clears saved files)
     const removeLogoBtn = document.getElementById('removeLogoBtn');
     const removeSignatureBtn = document.getElementById('removeSignatureBtn');
     const removeLogoFlag = document.getElementById('remove_logo');
     const removeSignatureFlag = document.getElementById('remove_signature');
-
     function resetUploadArea(areaId) {
+        console.log('Resetting upload area:', areaId);
         const area = document.getElementById(areaId);
         if (!area) return;
-        // Keep placeholder blank as requested
-        area.innerHTML = '';
+        const preview = area.querySelector('.preview-image');
+        if (preview) {
+            preview.src = '';
+            preview.style.display = 'none';
+        }
+        const fileName = area.querySelector('.file-name');
+        if (fileName) fileName.textContent = '';
+        const hint = area.querySelector('.upload-hint');
+        if (hint) hint.style.display = 'block';
+        const removeBtn = area.querySelector('.file-remove');
+        if (removeBtn) removeBtn.style.display = 'none';
     }
-
     if (logoInput) {
-        logoInput.addEventListener('change', () => {
-            if (removeLogoFlag) removeLogoFlag.value = '0';
-        });
+        // Removed change listener
     }
     if (signatureInput) {
-        signatureInput.addEventListener('change', () => {
-            if (removeSignatureFlag) removeSignatureFlag.value = '0';
-        });
+        // Removed change listener
     }
-
     if (removeLogoBtn) {
         removeLogoBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            console.log('Remove logo clicked');
             if (removeLogoFlag) removeLogoFlag.value = '1';
             if (logoInput) logoInput.value = '';
-            // Remove immediately on backend, fallback to hidden flag on Save
-            fetch('/template/remove_asset/logo', { method: 'POST' }).catch(() => {});
+            // Removed fetch as handled in page script
             resetUploadArea('logoUploadArea');
         });
     }
-
     if (removeSignatureBtn) {
         removeSignatureBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            console.log('Remove signature clicked');
             if (removeSignatureFlag) removeSignatureFlag.value = '1';
             if (signatureInput) signatureInput.value = '';
-            fetch('/template/remove_asset/signature', { method: 'POST' }).catch(() => {});
+            // Removed fetch as handled in page script
             resetUploadArea('signatureUploadArea');
         });
     }
-const stampUploadInput = document.getElementById('stamp_upload');
+    const stampUploadInput = document.getElementById('stamp_upload');
     if (stampUploadInput) {
-        stampUploadInput.addEventListener('change', function (e) {
-            // If the user selects a new stamp, ensure any pending remove flag is cleared
-            const removeStampFlagLocal = document.getElementById('remove_stamp');
-            if (removeStampFlagLocal) removeStampFlagLocal.value = '0';
-            previewFile(e.target, 'stampUploadArea', 'stampUploadPreview');
-        });
+        // Removed change listener
     }
-
     // Remove Stamp (upload or auto-generated)
     const removeStampUploadBtn = document.getElementById('removeStampUploadBtn');
     const removeStampGeneratedBtn = document.getElementById('removeStampGeneratedBtn');
@@ -104,8 +84,8 @@ const stampUploadInput = document.getElementById('stamp_upload');
     const autoGenerateToggle = document.getElementById('autoGenerateStamp');
     const stampOptions = document.getElementById('stampOptions');
     const stampUploadSection = document.getElementById('stampUploadSection');
-
     function clearStampUI() {
+        console.log('Clearing stamp UI');
         if (stampUploadInput) stampUploadInput.value = '';
         if (stampDataInput) stampDataInput.value = '';
         if (autoGenerateToggle) autoGenerateToggle.checked = false;
@@ -113,25 +93,25 @@ const stampUploadInput = document.getElementById('stamp_upload');
         if (stampUploadSection) stampUploadSection.style.display = 'block';
         resetUploadArea('stampUploadArea');
     }
-
     async function removeStamp() {
+        console.log('Removing stamp');
         if (removeStampFlag) removeStampFlag.value = '1';
-        try { await fetch('/template/remove_asset/stamp', { method: 'POST' }); } catch (_) {}
+        try { await fetch('/template/remove-asset', { method: 'POST' }); } catch (_) { console.error('Stamp removal failed'); }
         clearStampUI();
     }
-
     if (removeStampUploadBtn) {
         removeStampUploadBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            console.log('Remove uploaded stamp clicked');
             removeStamp();
         });
     }
-
     if (removeStampGeneratedBtn) {
         removeStampGeneratedBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            console.log('Remove generated stamp clicked');
             removeStamp();
         });
     }
@@ -144,7 +124,6 @@ const stampUploadInput = document.getElementById('stamp_upload');
             logoInput.click();
         });
     }
-
     const signatureArea = document.getElementById('signatureUploadArea');
     if (signatureArea && signatureInput) {
         signatureArea.addEventListener('click', (e) => {
@@ -152,12 +131,10 @@ const stampUploadInput = document.getElementById('stamp_upload');
             signatureInput.click();
         });
     }
-
     const stampArea = document.getElementById('stampUploadArea');
     if (stampArea && stampUploadInput) {
         stampArea.addEventListener('click', () => stampUploadInput.click());
     }
-
     // Handle Enter Key Navigation (prevent form submit on non-submit buttons)
     const inputs = document.querySelectorAll('input, textarea');
     inputs.forEach(input => {
@@ -177,15 +154,16 @@ const stampUploadInput = document.getElementById('stamp_upload');
         });
     });
 });
-
 // File Preview Function
 function previewFile(input, areaId, previewId) {
+    console.log('Previewing file for area:', areaId);
     const area = document.getElementById(areaId);
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function (e) {
             let preview = document.getElementById(previewId);
             if (!preview) {
+                console.log('Creating new preview for:', previewId);
                 preview = document.createElement('img');
                 preview.id = previewId;
                 preview.className = 'preview-image';
@@ -193,10 +171,10 @@ function previewFile(input, areaId, previewId) {
                 area.appendChild(preview);
             }
             preview.src = e.target.result;
-
             // Add filename
             let fileName = area.querySelector('.file-name');
             if (!fileName) {
+                console.log('Creating new file name span');
                 fileName = document.createElement('span');
                 fileName.className = 'file-name';
                 area.appendChild(fileName);
@@ -206,7 +184,6 @@ function previewFile(input, areaId, previewId) {
         reader.readAsDataURL(input.files[0]);
     }
 }
-
 // Format Currency
 function formatCurrency(amount) {
     return new Intl.NumberFormat('en-IN', {
@@ -215,7 +192,6 @@ function formatCurrency(amount) {
         minimumFractionDigits: 2
     }).format(amount);
 }
-
 // Show Toast Notification
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
@@ -234,15 +210,12 @@ function showToast(message, type = 'info') {
         z-index: 9999;
         animation: slideUp 0.3s ease;
     `;
-
     document.body.appendChild(toast);
-
     setTimeout(() => {
         toast.style.animation = 'slideDown 0.3s ease';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
-
 // Add animation keyframes
 const style = document.createElement('style');
 style.textContent = `

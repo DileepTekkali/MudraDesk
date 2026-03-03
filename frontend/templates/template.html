@@ -1,30 +1,24 @@
 {% extends 'base.html' %}
-
 {% block title %}Business Template - MudraDesk{% endblock %}
-
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">Business Template</h1>
     <p class="page-subtitle">Configure your business details — saved securely in this browser</p>
 </div>
-
 <form class="template-form" id="templateForm" enctype="multipart/form-data">
     <!-- Required Fields -->
     <div class="form-section">
         <h2 class="section-title">Required Information</h2>
-
         <div class="form-group">
             <label for="business_name" class="form-label">Business Name *</label>
             <input type="text" id="business_name" name="business_name" class="form-input"
                 placeholder="Enter your business name" required>
         </div>
-
         <div class="form-group">
             <label for="business_address" class="form-label">Business Address *</label>
             <textarea id="business_address" name="business_address" class="form-input form-textarea" required
                 placeholder="Enter complete business address"></textarea>
         </div>
-
         <div class="form-row">
             <div class="form-group">
                 <label for="owner_name" class="form-label">Owner Name *</label>
@@ -38,16 +32,13 @@
             </div>
         </div>
     </div>
-
     <!-- Optional Fields -->
     <div class="form-section">
         <h2 class="section-title">Optional Information</h2>
-
         <div class="form-group">
             <label for="gst_number" class="form-label">GST Number</label>
             <input type="text" id="gst_number" name="gst_number" class="form-input" placeholder="e.g., 22AAAAA0000A1Z5">
         </div>
-
         <!-- Logo Upload -->
         <div class="form-group">
             <label for="logo" class="form-label">Business Logo (PNG only)</label>
@@ -62,7 +53,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Signature Upload -->
         <div class="form-group">
             <label for="signature" class="form-label">Signature (PNG only)</label>
@@ -78,11 +68,9 @@
             </div>
         </div>
     </div>
-
     <!-- Stamp Section -->
     <div class="form-section">
         <h2 class="section-title">Business Stamp</h2>
-
         <!-- Upload Stamp -->
         <div class="stamp-upload-section" id="stampUploadSection">
             <div class="form-group">
@@ -99,7 +87,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Auto Generate Toggle -->
         <div class="toggle-group">
             <label class="toggle-label">
@@ -108,7 +95,6 @@
                 <span class="toggle-text">Auto-Generate Stamp</span>
             </label>
         </div>
-
         <!-- Auto Generate Options -->
         <div class="stamp-options" id="stampOptions" style="display:none;">
             <div class="form-row">
@@ -122,7 +108,6 @@
                     <input type="text" id="stamp_place" name="stamp_place" class="form-input" placeholder="City/Town">
                 </div>
             </div>
-
             <div class="stamp-preview">
                 <div class="form-group" style="text-align:center;">
                     <label class="form-label">Stamp Preview</label>
@@ -137,10 +122,8 @@
         </div>
         <input type="hidden" name="stamp_type" value="circle">
     </div>
-
     <div id="saveStatus" style="display:none; padding:12px; border-radius:8px; margin-bottom:16px; font-weight:500;">
     </div>
-
     <div class="form-actions">
         <button type="submit" class="btn btn-primary btn-large btn-full">
             💾 Save Template
@@ -148,7 +131,6 @@
     </div>
 </form>
 {% endblock %}
-
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/stamp.js') }}"></script>
 <script>
@@ -160,14 +142,12 @@
         const el = document.getElementById(f);
         if (el && existing[f]) el.value = existing[f];
     });
-
     if (existing.stamp_data) {
         document.getElementById('stampData').value = existing.stamp_data;
         document.getElementById('autoGenerateStamp').checked = true;
         document.getElementById('stampOptions').style.display = 'block';
         document.getElementById('stampUploadSection').style.display = 'none';
     }
-
     // ── Helper: lock/unlock the invisible file-input overlay ─────────────────
     // When an image IS shown, we disable pointer-events on the file input so the
     // Remove button (and everything else) can receive taps freely — the OS-level
@@ -177,68 +157,69 @@
         const fi = document.getElementById(inputId);
         if (fi) fi.style.pointerEvents = active ? 'auto' : 'none';
     }
-
     // ─── Unified Image Upload & Preview Logic ──────────────────────────────
     const mediaFields = [
-        { id: 'logo', urlKey: 'logo_url', fileNameKey: 'logo_filename', previewId: 'logoPreview', removeBtnId: 'removeLogoBtn', hintId: 'logoHint' },
-        { id: 'signature', urlKey: 'signature_url', fileNameKey: 'signature_filename', previewId: 'signaturePreview', removeBtnId: 'removeSignatureBtn', hintId: 'signatureHint' },
-        { id: 'stamp_upload', urlKey: 'stamp_url', fileNameKey: 'stamp_filename', previewId: 'stampUploadPreview', removeBtnId: 'removeStampUploadBtn', hintId: 'stampHint' }
+        { id: 'logo', urlKey: 'logo_url', fileNameKey: 'logo_filename', previewId: 'logoPreview', removeBtnId: 'removeLogoBtn', hintId: 'logoHint', fileNameId: 'logoFileName' },
+        { id: 'signature', urlKey: 'signature_url', fileNameKey: 'signature_filename', previewId: 'signaturePreview', removeBtnId: 'removeSignatureBtn', hintId: 'signatureHint', fileNameId: 'signatureFileName' },
+        { id: 'stamp_upload', urlKey: 'stamp_url', fileNameKey: 'stamp_filename', previewId: 'stampUploadPreview', removeBtnId: 'removeStampUploadBtn', hintId: 'stampHint', fileNameId: 'stampFileName' }
     ];
-
     mediaFields.forEach(field => {
+        console.log('Processing media field:', field.id);
         const input = document.getElementById(field.id);
         const preview = document.getElementById(field.previewId);
         const removeBtn = document.getElementById(field.removeBtnId);
         const hint = document.getElementById(field.hintId);
-
-        if (!input || !preview || !removeBtn || !hint) return;
-
+        const fileNameEl = document.getElementById(field.fileNameId);
+        if (!input || !preview || !removeBtn || !hint || !fileNameEl) {
+            console.log('Missing elements for field:', field.id);
+            return;
+        }
         // 1. Initial State: Restore from server/localStorage
         if (existing[field.urlKey]) {
+            console.log('Restoring from existing data for:', field.id);
             preview.src = existing[field.urlKey];
             preview.style.display = 'block';
             hint.style.display = 'none';
+            fileNameEl.textContent = existing[field.fileNameKey] || '';
             removeBtn.style.display = 'inline-flex';
             setFileInputActive(field.id, false);
         }
-
         // 2. Handle File Selection: Show preview and hide controls
         input.addEventListener('change', function () {
             const file = this.files[0];
             if (!file) return;
-
+            console.log('File selected for:', field.id);
             const reader = new FileReader();
             reader.onload = e => {
+                console.log('Preview loaded for:', field.id);
                 preview.src = e.target.result;
                 preview.style.display = 'block';
                 hint.style.display = 'none';
+                fileNameEl.textContent = file.name;
                 removeBtn.style.display = 'inline-flex';
                 // Lock file input overlay so Remove button is accessible
                 setFileInputActive(field.id, false);
             };
             reader.readAsDataURL(file);
         });
-
         // 3. Handle Removal: Reset UI and optionally clean up backend
         removeBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
-
+            console.log('Removing asset for:', field.id);
             // Clear UI instantly
             preview.src = '';
             preview.style.display = 'none';
             hint.style.display = 'block';
+            fileNameEl.textContent = '';
             removeBtn.style.display = 'none';
-
             // Clear input value and logic state
             input.value = '';
             input.disabled = true; // Lock briefly during backend sync
             setFileInputActive(field.id, true);
-
             const filename = existing[field.fileNameKey];
             delete existing[field.urlKey];
             delete existing[field.fileNameKey];
-
             if (filename) {
                 try {
                     await fetch('/template/remove-asset', {
@@ -246,25 +227,25 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ filename })
                     });
-                } catch (_) { /* ignore */ }
+                    console.log('Backend removal successful for:', field.id);
+                } catch (err) {
+                    console.error('Backend removal failed for:', field.id, err);
+                }
             }
             input.disabled = false;
         });
     });
-
     // Stamp auto-generate toggle
     document.getElementById('autoGenerateStamp').addEventListener('change', function () {
         document.getElementById('stampOptions').style.display = this.checked ? 'block' : 'none';
         document.getElementById('stampUploadSection').style.display = this.checked ? 'none' : 'block';
         if (!this.checked) { document.getElementById('stampData').value = ''; }
     });
-
     // ── Form Submit — Upload files, then save to localStorage ─
     document.getElementById('templateForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         const saveStatus = document.getElementById('saveStatus');
         saveStatus.style.display = 'none';
-
         const templateData = {
             business_name: document.getElementById('business_name').value.trim(),
             business_address: document.getElementById('business_address').value.trim(),
@@ -282,7 +263,6 @@
             stamp_url: existing.stamp_url || null,
             stamp_filename: existing.stamp_filename || null,
         };
-
         // Upload files if selected
         async function uploadAsset(inputId, assetType) {
             const input = document.getElementById(inputId);
@@ -297,7 +277,6 @@
             }
             return null;
         }
-
         try {
             const logoRes = await uploadAsset('logo', 'logo');
             if (logoRes) {
@@ -314,15 +293,12 @@
                 templateData.stamp_url = stampRes.url;
                 templateData.stamp_filename = stampRes.filename;
             }
-
             MudraStorage.saveTemplate(templateData);
-
             saveStatus.style.background = '#dcfce7';
             saveStatus.style.color = '#16a34a';
             saveStatus.style.border = '1px solid #16a34a';
             saveStatus.textContent = '✅ Template saved successfully to this browser!';
             saveStatus.style.display = 'block';
-
             setTimeout(() => { window.location.href = '/'; }, 1500);
         } catch (err) {
             saveStatus.style.background = '#fee2e2';
@@ -332,7 +308,6 @@
             saveStatus.style.display = 'block';
         }
     });
-
     // Stamp generator
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof initStampGenerator === 'function') initStampGenerator();
