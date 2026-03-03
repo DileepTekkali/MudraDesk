@@ -194,72 +194,13 @@ def health_check():
 @app.route('/template', methods=['GET', 'POST'])
 @login_required
 def template():
-    user = get_current_user()
-    if request.method == 'POST':
-        # Handle file uploads (logo, signature, stamp) — still server-side files
-        logo_path = _handle_file_upload('logo', 'logo')
-        signature_path = _handle_file_upload('signature', 'sig')
-        stamp_upload_path = _handle_file_upload('stamp_upload', 'stamp')
-        stamp_data = request.form.get('stamp_data', '')
-
-        # Return paths so the client can save them to localStorage
-        return jsonify({
-            'success': True,
-            'logo_path': logo_path,
-            'signature_path': signature_path,
-            'stamp_upload_path': stamp_upload_path,
-            'stamp_data': stamp_data
-        })
-
+    # Templates are now handled entirely client-side with Base64 in localStorage.
+    # The /template route just serves the page.
     return render_template('template.html')
 
 
-def _handle_file_upload(field_name: str, prefix: str) -> str | None:
-    """Upload a file and return its filename (or None)."""
-    if field_name not in request.files:
-        return None
-    f = request.files[field_name]
-    if f and f.filename and allowed_file(f.filename):
-        filename = secure_filename(f"{prefix}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{f.filename}")
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        f.save(filepath)
-        return filename
-    return None
-
-
-@app.route('/template/upload-asset', methods=['POST'])
-@login_required
-def upload_template_asset():
-    """Upload a single asset (logo/signature/stamp) and return its URL."""
-    asset_type = request.form.get('asset_type', 'logo')
-    prefix_map = {'logo': 'logo', 'signature': 'sig', 'stamp': 'stamp'}
-    prefix = prefix_map.get(asset_type, 'file')
-    filename = _handle_file_upload('file', prefix)
-    if filename:
-        return jsonify({
-            'success': True,
-            'filename': filename,
-            'url': url_for('uploaded_file', filename=filename)
-        })
-    return jsonify({'success': False, 'error': 'No valid file uploaded'}), 400
-
-
-@app.route('/template/remove-asset', methods=['POST'])
-@login_required
-def remove_template_asset():
-    """Delete an uploaded file asset."""
-    data = request.get_json()
-    filename = data.get('filename', '')
-    if not filename:
-        return jsonify({'success': False, 'error': 'No filename provided'}), 400
-    safe_name = secure_filename(filename)
-    path = os.path.join(app.config['UPLOAD_FOLDER'], safe_name)
-    if os.path.exists(path):
-        try:
-            os.remove(path)
-        except Exception:
-            pass
-    return jsonify({'success': True})
+# Removed: _handle_file_upload, upload_template_asset, remove_template_asset
+# Image handling is now purely client-side Base64.
 
 
 @app.route('/bill/create', methods=['GET', 'POST'])

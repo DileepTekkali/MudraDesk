@@ -94,9 +94,8 @@ document.addEventListener('DOMContentLoaded', function () {
         resetUploadArea('stampUploadArea');
     }
     async function removeStamp() {
-        console.log('Removing stamp');
+        console.log('Removing stamp locally');
         if (removeStampFlag) removeStampFlag.value = '1';
-        try { await fetch('/template/remove-asset', { method: 'POST' }); } catch (_) { console.error('Stamp removal failed'); }
         clearStampUI();
     }
     if (removeStampUploadBtn) {
@@ -154,16 +153,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
-// File Preview Function
+// File Preview Function (Base64)
 function previewFile(input, areaId, previewId) {
     console.log('Previewing file for area:', areaId);
-    const area = document.getElementById(areaId);
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function (e) {
+            const area = document.getElementById(areaId);
             let preview = document.getElementById(previewId);
             if (!preview) {
-                console.log('Creating new preview for:', previewId);
                 preview = document.createElement('img');
                 preview.id = previewId;
                 preview.className = 'preview-image';
@@ -171,10 +169,8 @@ function previewFile(input, areaId, previewId) {
                 area.appendChild(preview);
             }
             preview.src = e.target.result;
-            // Add filename
             let fileName = area.querySelector('.file-name');
             if (!fileName) {
-                console.log('Creating new file name span');
                 fileName = document.createElement('span');
                 fileName.className = 'file-name';
                 area.appendChild(fileName);

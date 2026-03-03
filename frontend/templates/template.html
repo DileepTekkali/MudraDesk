@@ -163,20 +163,17 @@
         { id: 'signature', urlKey: 'signature_url', fileNameKey: 'signature_filename', previewId: 'signaturePreview', removeBtnId: 'removeSignatureBtn', hintId: 'signatureHint', fileNameId: 'signatureFileName' },
         { id: 'stamp_upload', urlKey: 'stamp_url', fileNameKey: 'stamp_filename', previewId: 'stampUploadPreview', removeBtnId: 'removeStampUploadBtn', hintId: 'stampHint', fileNameId: 'stampFileName' }
     ];
+
     mediaFields.forEach(field => {
-        console.log('Processing media field:', field.id);
         const input = document.getElementById(field.id);
         const preview = document.getElementById(field.previewId);
         const removeBtn = document.getElementById(field.removeBtnId);
         const hint = document.getElementById(field.hintId);
         const fileNameEl = document.getElementById(field.fileNameId);
-        if (!input || !preview || !removeBtn || !hint || !fileNameEl) {
-            console.log('Missing elements for field:', field.id);
-            return;
-        }
-        // 1. Initial State: Restore from server/localStorage
+        if (!input || !preview || !removeBtn || !hint || !fileNameEl) return;
+
+        // 1. Initial State: Restore from localStorage
         if (existing[field.urlKey]) {
-            console.log('Restoring from existing data for:', field.id);
             preview.src = existing[field.urlKey];
             preview.style.display = 'block';
             hint.style.display = 'none';
@@ -184,68 +181,61 @@
             removeBtn.style.display = 'inline-flex';
             setFileInputActive(field.id, false);
         }
-        // 2. Handle File Selection: Show preview and hide controls
+
+        // 2. Handle File Selection: Read as Base64 (Local Only)
         input.addEventListener('change', function () {
             const file = this.files[0];
             if (!file) return;
-            console.log('File selected for:', field.id);
             const reader = new FileReader();
             reader.onload = e => {
-                console.log('Preview loaded for:', field.id);
-                preview.src = e.target.result;
+                const base64Data = e.target.result;
+                preview.src = base64Data;
                 preview.style.display = 'block';
                 hint.style.display = 'none';
                 fileNameEl.textContent = file.name;
                 removeBtn.style.display = 'inline-flex';
-                // Lock file input overlay so Remove button is accessible
+
+                // Temporarily store in 'existing' object so Save handles it
+                existing[field.urlKey] = base64Data;
+                existing[field.fileNameKey] = file.name;
+
                 setFileInputActive(field.id, false);
             };
             reader.readAsDataURL(file);
         });
-        // 3. Handle Removal: Reset UI and optionally clean up backend
-        removeBtn.addEventListener('click', async (e) => {
+
+        // 3. Handle Removal: Reset UI (Local Only)
+        removeBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Removing asset for:', field.id);
-            // Clear UI instantly
             preview.src = '';
             preview.style.display = 'none';
             hint.style.display = 'block';
             fileNameEl.textContent = '';
             removeBtn.style.display = 'none';
-            // Clear input value and logic state
             input.value = '';
-            input.disabled = true; // Lock briefly during backend sync
-            setFileInputActive(field.id, true);
-            const filename = existing[field.fileNameKey];
+
+            // Remove from local state object
             delete existing[field.urlKey];
             delete existing[field.fileNameKey];
-            if (filename) {
-                try {
-                    await fetch('/template/remove-asset', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename })
-                    });
-                    console.log('Backend removal successful for:', field.id);
-                } catch (err) {
-                    console.error('Backend removal failed for:', field.id, err);
-                }
-            }
-            input.disabled = false;
+
+            setFileInputActive(field.id, true);
         });
     });
+
     // Stamp auto-generate toggle
     document.getElementById('autoGenerateStamp').addEventListener('change', function () {
         document.getElementById('stampOptions').style.display = this.checked ? 'block' : 'none';
         document.getElementById('stampUploadSection').style.display = this.checked ? 'none' : 'block';
         if (!this.checked) { document.getElementById('stampData').value = ''; }
     });
-    // ── Form Submit — Upload files, then save to localStorage ─
+
+    // ── Form Submit — Save all data directly to localStorage ──────
     document.getElementById('templateForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         const saveStatus = document.getElementById('saveStatus');
         saveStatus.style.display = 'none';
+
         const templateData = {
             business_name: document.getElementById('business_name').value.trim(),
             business_address: document.getElementById('business_address').value.trim(),
@@ -255,7 +245,7 @@
             stamp_data: document.getElementById('stampData').value,
             stamp_business_name: document.getElementById('stamp_business_name').value.trim(),
             stamp_place: document.getElementById('stamp_place').value.trim(),
-            // keep existing URLs unless changed
+            // These are already updated via the 'change' or 'click' listeners above
             logo_url: existing.logo_url || null,
             logo_filename: existing.logo_filename || null,
             signature_url: existing.signature_url || null,
@@ -263,36 +253,8 @@
             stamp_url: existing.stamp_url || null,
             stamp_filename: existing.stamp_filename || null,
         };
-        // Upload files if selected
-        async function uploadAsset(inputId, assetType) {
-            const input = document.getElementById(inputId);
-            if (!input.files.length) return;
-            const fd = new FormData();
-            fd.append('file', input.files[0]);
-            fd.append('asset_type', assetType);
-            const res = await fetch('/template/upload-asset', { method: 'POST', body: fd });
-            if (res.ok) {
-                const data = await res.json();
-                return data;
-            }
-            return null;
-        }
+
         try {
-            const logoRes = await uploadAsset('logo', 'logo');
-            if (logoRes) {
-                templateData.logo_url = logoRes.url;
-                templateData.logo_filename = logoRes.filename;
-            }
-            const sigRes = await uploadAsset('signature', 'signature');
-            if (sigRes) {
-                templateData.signature_url = sigRes.url;
-                templateData.signature_filename = sigRes.filename;
-            }
-            const stampRes = await uploadAsset('stamp_upload', 'stamp');
-            if (stampRes) {
-                templateData.stamp_url = stampRes.url;
-                templateData.stamp_filename = stampRes.filename;
-            }
             MudraStorage.saveTemplate(templateData);
             saveStatus.style.background = '#dcfce7';
             saveStatus.style.color = '#16a34a';
