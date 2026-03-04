@@ -93,17 +93,19 @@
             </tr>
         `).join('');
 
+        const isBase64 = url => url && url.startsWith('data:');
+
         // ── Logo image HTML ─────────────────────────────────
-        const logoHtml = tpl.logo_url
+        const logoHtml = isBase64(tpl.logo_url)
             ? `<div class="header-logo-box"><img src="${tpl.logo_url}" alt="Logo" class="header-logo-img"></div>`
             : '';
 
         // ── Stamp + signature HTML ──────────────────────────
-        const stampHtml = (tpl.stamp_data || tpl.stamp_url)
-            ? `<img src="${tpl.stamp_data || tpl.stamp_url}" alt="Stamp"
+        const stampHtml = (isBase64(tpl.stamp_data) || isBase64(tpl.stamp_url))
+            ? `<img src="${isBase64(tpl.stamp_data) ? tpl.stamp_data : tpl.stamp_url}" alt="Stamp"
                 style="max-height:70px; max-width:100%; position:absolute; z-index:1; opacity:0.9; transform:rotate(-5deg);">`
             : '';
-        const sigHtml = tpl.signature_url
+        const sigHtml = isBase64(tpl.signature_url)
             ? `<img src="${tpl.signature_url}" alt="Signature"
                 style="max-height:42px; max-width:115px; position:absolute; z-index:10;">`
             : '';
