@@ -75,9 +75,9 @@ endblock %}
         <div class="items-container" id="itemsContainer">
             <div class="item-row" data-index="0">
                 <input type="text" name="item_name[]" class="form-input item-name" placeholder="Item name" required>
-                <input type="number" name="quantity[]" class="form-input item-qty" placeholder="0" min="0" step="0.01"
-                    value="1" required style="text-align:right">
-                <input type="number" name="rate[]" class="form-input item-rate" placeholder="0.00" min="0" step="0.01"
+                <input type="text" name="quantity[]" class="form-input item-qty" placeholder="0" value="1"
+                    inputmode="decimal" required style="text-align:right">
+                <input type="text" name="rate[]" class="form-input item-rate" placeholder="0.00" inputmode="decimal"
                     required style="text-align:right">
                 <div class="item-amount">₹0.00</div>
                 <button type="button" class="btn-remove" onclick="removeItem(this)"
@@ -161,8 +161,8 @@ endblock %}
         newRow.dataset.index = itemIndex;
         newRow.innerHTML = `
             <input type="text" name="item_name[]" class="form-input item-name" placeholder="Item name" required>
-            <input type="number" name="quantity[]" class="form-input item-qty" placeholder="0" min="0" step="0.01" value="1" required style="text-align:right">
-            <input type="number" name="rate[]" class="form-input item-rate" placeholder="0.00" min="0" step="0.01" required style="text-align:right">
+            <input type="text" name="quantity[]" class="form-input item-qty" placeholder="0" inputmode="decimal" value="1" required style="text-align:right">
+            <input type="text" name="rate[]" class="form-input item-rate" placeholder="0.00" inputmode="decimal" required style="text-align:right">
             <div class="item-amount">₹0.00</div>
             <button type="button" class="btn-remove" onclick="removeItem(this)">×</button>
         `;
@@ -194,8 +194,22 @@ endblock %}
     }
 
     function addRowEventListeners(row) {
-        row.querySelector('.item-qty').addEventListener('input', () => calculateRowAmount(row));
-        row.querySelector('.item-rate').addEventListener('input', () => calculateRowAmount(row));
+        const qtyInp = row.querySelector('.item-qty');
+        const rateInp = row.querySelector('.item-rate');
+
+        // Strictly allow only numbers and decimal
+        [qtyInp, rateInp].forEach(inp => {
+            inp.setAttribute('inputmode', 'decimal');
+            inp.addEventListener('input', function () {
+                // Remove any non-numeric characters except one decimal point
+                let val = this.value.replace(/[^0-9.]/g, '');
+                if ((val.match(/\./g) || []).length > 1) {
+                    val = val.slice(0, val.lastIndexOf('.'));
+                }
+                if (this.value !== val) this.value = val;
+                calculateRowAmount(row);
+            });
+        });
     }
 
     function calculateRowAmount(row) {

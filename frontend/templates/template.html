@@ -142,6 +142,17 @@
         const el = document.getElementById(f);
         if (el && existing[f]) el.value = existing[f];
     });
+
+    // ── Filter out old server-side paths (must be Base64/Data URLs) ──
+    ['logo_url', 'signature_url', 'stamp_url'].forEach(key => {
+        if (existing[key] && !existing[key].startsWith('data:')) {
+            console.warn(`[MudraDesk] Clearing legacy path: ${existing[key]}`);
+            delete existing[key];
+            const fileNameKey = key.replace('_url', '_filename');
+            delete existing[fileNameKey];
+        }
+    });
+
     if (existing.stamp_data) {
         document.getElementById('stampData').value = existing.stamp_data;
         document.getElementById('autoGenerateStamp').checked = true;
